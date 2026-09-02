@@ -62,11 +62,11 @@ public sealed class DashboardServiceTests(PostgresFixture fx)
             Sale(M1, Msk(2026, 6, 10), SaleStatus.Paid, (P1, 2, 100, 60), (P2, 1, 50, 20)),   // rev 250, cost 140
             Sale(M2, Msk(2026, 6, 15), SaleStatus.Paid, (P1, 1, 200, 100)),                    // rev 200, cost 100
             Sale(M1, Msk(2026, 6, 1, 0, 0), SaleStatus.Paid, (P1, 1, 100, 40)),                // start boundary -> included
-            // Excluded from financials:
+                                                                                               // Excluded from financials:
             Sale(M1, Msk(2026, 6, 12), SaleStatus.Cancelled, (P1, 1, 999, 1)),
             Sale(M2, Msk(2026, 6, 18), SaleStatus.Refunded, (P2, 1, 999, 1)),
             Sale(M2, Msk(2026, 7, 1, 0, 0), SaleStatus.Paid, (P1, 1, 500, 100)),               // end boundary -> excluded
-            // Previous window (May): one Paid sale by M1.
+                                                                                               // Previous window (May): one Paid sale by M1.
             Sale(M1, Msk(2026, 5, 15), SaleStatus.Paid, (P1, 1, 100, 50)));                    // rev 100, cost 50
 
         await db.SaveChangesAsync();

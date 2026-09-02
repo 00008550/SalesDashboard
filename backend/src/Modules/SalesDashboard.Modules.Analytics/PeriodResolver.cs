@@ -52,42 +52,42 @@ public static class PeriodResolver
         switch (preset.ToLowerInvariant())
         {
             case "today":
-            {
-                current = new Window(today, now);
-                var prevStart = today.AddDays(-1);
-                previous = new Window(prevStart, prevStart + (now - today)); // same elapsed on the previous day
-                break;
-            }
+                {
+                    current = new Window(today, now);
+                    var prevStart = today.AddDays(-1);
+                    previous = new Window(prevStart, prevStart + (now - today)); // same elapsed on the previous day
+                    break;
+                }
             case "last7":
-            {
-                var start = today.AddDays(-6);
-                current = new Window(start, now);
-                previous = new Window(start.AddDays(-7), now.AddDays(-7)); // shifted back 7 calendar days
-                break;
-            }
+                {
+                    var start = today.AddDays(-6);
+                    current = new Window(start, now);
+                    previous = new Window(start.AddDays(-7), now.AddDays(-7)); // shifted back 7 calendar days
+                    break;
+                }
             case "last30":
-            {
-                var start = today.AddDays(-29);
-                current = new Window(start, now);
-                previous = new Window(start.AddDays(-30), now.AddDays(-30)); // shifted back 30 calendar days
-                break;
-            }
+                {
+                    var start = today.AddDays(-29);
+                    current = new Window(start, now);
+                    previous = new Window(start.AddDays(-30), now.AddDays(-30)); // shifted back 30 calendar days
+                    break;
+                }
             case "thismonth":
-            {
-                current = new Window(monthStart, now); // month-to-date
-                var prevMonthStart = monthStart.AddMonths(-1);
-                var prevEnd = prevMonthStart + (now - monthStart);
-                if (prevEnd > monthStart) prevEnd = monthStart; // cap when the previous month is shorter
-                previous = new Window(prevMonthStart, prevEnd);
-                break;
-            }
+                {
+                    current = new Window(monthStart, now); // month-to-date
+                    var prevMonthStart = monthStart.AddMonths(-1);
+                    var prevEnd = prevMonthStart + (now - monthStart);
+                    if (prevEnd > monthStart) prevEnd = monthStart; // cap when the previous month is shorter
+                    previous = new Window(prevMonthStart, prevEnd);
+                    break;
+                }
             case "prevmonth":
-            {
-                var prevMonthStart = monthStart.AddMonths(-1);
-                current = new Window(prevMonthStart, monthStart); // full previous calendar month
-                previous = new Window(prevMonthStart.AddMonths(-1), prevMonthStart);
-                break;
-            }
+                {
+                    var prevMonthStart = monthStart.AddMonths(-1);
+                    current = new Window(prevMonthStart, monthStart); // full previous calendar month
+                    previous = new Window(prevMonthStart.AddMonths(-1), prevMonthStart);
+                    break;
+                }
             default:
                 throw new ArgumentException($"Unknown preset '{preset}'.", nameof(preset));
         }
