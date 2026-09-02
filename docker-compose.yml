@@ -1,0 +1,45 @@
+# One command brings up the stack:  docker compose up --build
+#
+# Startup is ordered by health, not by sleeps:
+#   db healthy (pg_isready) -> api migrates + seeds, then serves and reports ready.
+#
+# The database port is deliberately NOT published to the host (nothing on the host needs it, and it
+# avoids clashing with other local Postgres instances). Only the API is published for now; the web
+# tier is added in the frontend milestone and will become the single published service.
+name: salesdashboard
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: salesdashboard
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d salesdashboard"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/src/SalesDashboard.Api/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=salesdashboard;Username=app;Password=app"
+    ports:
+      - "8080:8080" # temporary; the web tier will front the API in the frontend milestone
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/api/health/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      start_period: 120s
+      retries: 6
+
+volumes:
+  db-data:
