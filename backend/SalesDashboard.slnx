@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SalesDashboard.Api/SalesDashboard.Api.csproj" />
+    <Project Path="src/SalesDashboard.Contracts/SalesDashboard.Contracts.csproj" />
+    <Project Path="src/SalesDashboard.Infrastructure/SalesDashboard.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/">
+    <Project Path="src/Modules/SalesDashboard.Modules.Analytics/SalesDashboard.Modules.Analytics.csproj" />
+    <Project Path="src/Modules/SalesDashboard.Modules.Catalog/SalesDashboard.Modules.Catalog.csproj" />
+    <Project Path="src/Modules/SalesDashboard.Modules.People/SalesDashboard.Modules.People.csproj" />
+    <Project Path="src/Modules/SalesDashboard.Modules.Sales/SalesDashboard.Modules.Sales.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SalesDashboard.Tests/SalesDashboard.Tests.csproj" />
+  </Folder>
+</Solution>
