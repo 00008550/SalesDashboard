@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using SalesDashboard.Api;
 using SalesDashboard.Infrastructure;
 using SalesDashboard.Infrastructure.Persistence;
+using SalesDashboard.Modules.Analytics;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,8 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
         "ConnectionStrings:Default is required (set ConnectionStrings__Default for the container).");
 
 builder.Services.AddInfrastructure(connectionString);
+builder.Services.AddScoped<DashboardQueries>();
+builder.Services.AddScoped<DashboardService>();
 builder.Services.AddSingleton<StartupState>();
 builder.Services.AddProblemDetails();
 
@@ -27,8 +30,24 @@ app.MapGet("/api/health/ready", (StartupState state) => state.Ready
     ? Results.Ok(new { status = "ready" })
     : Results.Json(new { status = "starting" }, statusCode: StatusCodes.Status503ServiceUnavailable));
 
-// Temporary proof-of-data endpoint for the early Docker vertical slice; replaced by /api/dashboard
-// in the analytics milestone. Confirms the seed actually populated the database.
+// The single composed dashboard snapshot. Accepts either ?preset=... or ?from=&to= (inclusive
+// date-only). Invalid input -> 400 ProblemDetails. All aggregation happens server-side.
+app.MapGet("/api/dashboard", async (
+    string? preset, DateOnly? from, DateOnly? to, DashboardService dashboard, CancellationToken ct) =>
+{
+    try
+    {
+        return Results.Ok(await dashboard.BuildAsync(preset, from, to, ct));
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.Problem(title: "Invalid period", detail: ex.Message,
+            statusCode: StatusCodes.Status400BadRequest);
+    }
+});
+
+// Proof-of-data endpoint kept from the early Docker slice; also used by the startup test.
+// Confirms the seed actually populated the database.
 app.MapGet("/api/meta/counts", async (WriteDbContext db, CancellationToken ct) => Results.Ok(new
 {
     categories = await db.Categories.CountAsync(ct),

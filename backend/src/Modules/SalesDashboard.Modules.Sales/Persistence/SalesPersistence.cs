@@ -20,6 +20,7 @@ public sealed class SaleConfiguration : IEntityTypeConfiguration<Sale>
     {
         b.ToTable(SalesSchema.SalesTable, SalesSchema.Name);
         b.HasKey(s => s.Id);
+        b.Property(s => s.Id).HasColumnName("id");
 
         b.Property(s => s.OccurredAt).HasColumnName("occurred_at").IsRequired();
         b.Property(s => s.ManagerId).HasColumnName("manager_id").IsRequired();
@@ -58,6 +59,7 @@ public sealed class SaleItemConfiguration : IEntityTypeConfiguration<SaleItem>
             t.HasCheckConstraint("ck_sale_items_unit_cost_nonneg", "unit_cost >= 0");
         });
         b.HasKey(i => i.Id);
+        b.Property(i => i.Id).HasColumnName("id");
 
         b.Property(i => i.SaleId).HasColumnName("sale_id").IsRequired();
         b.Property(i => i.ProductId).HasColumnName("product_id").IsRequired();

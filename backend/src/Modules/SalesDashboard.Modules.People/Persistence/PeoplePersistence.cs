@@ -17,6 +17,7 @@ public sealed class ManagerConfiguration : IEntityTypeConfiguration<Manager>
     {
         b.ToTable(PeopleSchema.ManagersTable, PeopleSchema.Name);
         b.HasKey(m => m.Id);
+        b.Property(m => m.Id).HasColumnName("id");
         b.Property(m => m.FullName).HasColumnName("full_name").HasMaxLength(120).IsRequired();
         b.Property(m => m.Title).HasColumnName("title").HasMaxLength(80).IsRequired();
         b.Property(m => m.Team).HasColumnName("team").HasMaxLength(80).IsRequired();
@@ -32,6 +33,7 @@ public sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
     {
         b.ToTable(PeopleSchema.CustomersTable, PeopleSchema.Name);
         b.HasKey(c => c.Id);
+        b.Property(c => c.Id).HasColumnName("id");
         b.Property(c => c.Name).HasColumnName("name").HasMaxLength(120).IsRequired();
         b.Property(c => c.Company).HasColumnName("company").HasMaxLength(120).IsRequired();
         b.Property(c => c.Segment)

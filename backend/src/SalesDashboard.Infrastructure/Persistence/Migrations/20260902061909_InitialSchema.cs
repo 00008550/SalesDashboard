@@ -28,12 +28,12 @@ namespace SalesDashboard.Infrastructure.Persistence.Migrations
                 schema: "catalog",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
                     name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_categories", x => x.Id);
+                    table.PrimaryKey("PK_categories", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -41,14 +41,14 @@ namespace SalesDashboard.Infrastructure.Persistence.Migrations
                 schema: "people",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
                     name = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
                     company = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
                     segment = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_customers", x => x.Id);
+                    table.PrimaryKey("PK_customers", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -56,7 +56,7 @@ namespace SalesDashboard.Infrastructure.Persistence.Migrations
                 schema: "people",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
                     full_name = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
                     title = table.Column<string>(type: "character varying(80)", maxLength: 80, nullable: false),
                     team = table.Column<string>(type: "character varying(80)", maxLength: 80, nullable: false),
@@ -66,7 +66,7 @@ namespace SalesDashboard.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_managers", x => x.Id);
+                    table.PrimaryKey("PK_managers", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -88,7 +88,7 @@ namespace SalesDashboard.Infrastructure.Persistence.Migrations
                 schema: "catalog",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
                     name = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
                     sku = table.Column<string>(type: "character varying(40)", maxLength: 40, nullable: false),
                     category_id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -97,7 +97,7 @@ namespace SalesDashboard.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_products", x => x.Id);
+                    table.PrimaryKey("PK_products", x => x.id);
                     table.CheckConstraint("ck_products_base_cost_nonneg", "base_cost >= 0");
                     table.CheckConstraint("ck_products_base_price_nonneg", "base_price >= 0");
                     table.ForeignKey(
@@ -105,7 +105,7 @@ namespace SalesDashboard.Infrastructure.Persistence.Migrations
                         column: x => x.category_id,
                         principalSchema: "catalog",
                         principalTable: "categories",
-                        principalColumn: "Id",
+                        principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
                 });
 
@@ -114,7 +114,7 @@ namespace SalesDashboard.Infrastructure.Persistence.Migrations
                 schema: "sales",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
                     manager_id = table.Column<Guid>(type: "uuid", nullable: false),
                     customer_id = table.Column<Guid>(type: "uuid", nullable: false),
                     occurred_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
@@ -122,20 +122,20 @@ namespace SalesDashboard.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_sales", x => x.Id);
+                    table.PrimaryKey("PK_sales", x => x.id);
                     table.ForeignKey(
                         name: "fk_sales_customer",
                         column: x => x.customer_id,
                         principalSchema: "people",
                         principalTable: "customers",
-                        principalColumn: "Id",
+                        principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "fk_sales_manager",
                         column: x => x.manager_id,
                         principalSchema: "people",
                         principalTable: "managers",
-                        principalColumn: "Id",
+                        principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
                 });
 
@@ -144,7 +144,7 @@ namespace SalesDashboard.Infrastructure.Persistence.Migrations
                 schema: "sales",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
                     sale_id = table.Column<Guid>(type: "uuid", nullable: false),
                     product_id = table.Column<Guid>(type: "uuid", nullable: false),
                     quantity = table.Column<int>(type: "integer", nullable: false),
@@ -153,7 +153,7 @@ namespace SalesDashboard.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_sale_items", x => x.Id);
+                    table.PrimaryKey("PK_sale_items", x => x.id);
                     table.CheckConstraint("ck_sale_items_quantity_positive", "quantity > 0");
                     table.CheckConstraint("ck_sale_items_unit_cost_nonneg", "unit_cost >= 0");
                     table.CheckConstraint("ck_sale_items_unit_price_nonneg", "unit_price >= 0");
@@ -162,14 +162,14 @@ namespace SalesDashboard.Infrastructure.Persistence.Migrations
                         column: x => x.product_id,
                         principalSchema: "catalog",
                         principalTable: "products",
-                        principalColumn: "Id",
+                        principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "fk_sale_items_sale",
                         column: x => x.sale_id,
                         principalSchema: "sales",
                         principalTable: "sales",
-                        principalColumn: "Id",
+                        principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
                 });
 
