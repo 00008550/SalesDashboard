@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-using SalesDashboard.Api;
 using SalesDashboard.Infrastructure;
 using SalesDashboard.Infrastructure.Persistence;
+using SalesDashboard.Infrastructure.Seeding;
+using SalesDashboard.Infrastructure.Startup;
+using SalesDashboard.Modules.Analytics;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,7 +12,8 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
         "ConnectionStrings:Default is required (set ConnectionStrings__Default for the container).");
 
 builder.Services.AddInfrastructure(connectionString);
-builder.Services.AddSingleton<StartupState>();
+builder.Services.AddScoped<DashboardQueries>();
+builder.Services.AddScoped<DashboardService>();
 builder.Services.AddProblemDetails();
 
 var app = builder.Build();
@@ -18,31 +21,52 @@ var app = builder.Build();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
-// Liveness: the process is up. Never fails — used for restart decisions, not readiness.
+// Liveness: the process is up. Never touches dependencies — used for restart decisions only.
 app.MapGet("/api/health/live", () => Results.Ok(new { status = "live" }));
 
-// Readiness: true only once migrations + seed have completed. Drives the Docker health check and
-// any depends_on: service_healthy gate.
-app.MapGet("/api/health/ready", (StartupState state) => state.Ready
-    ? Results.Ok(new { status = "ready" })
-    : Results.Json(new { status = "starting" }, statusCode: StatusCodes.Status503ServiceUnavailable));
-
-// Temporary proof-of-data endpoint for the early Docker vertical slice; replaced by /api/dashboard
-// in the analytics milestone. Confirms the seed actually populated the database.
-app.MapGet("/api/meta/counts", async (WriteDbContext db, CancellationToken ct) => Results.Ok(new
+// Readiness: a live check, re-evaluated on every probe. It proves the database is reachable, at the
+// latest migration (no migration still pending), seeded, and usable through the pooled dashboard
+// read path — see ReadinessProbe. It therefore flips back to 503 if PostgreSQL later becomes
+// unavailable or the schema is rolled back, rather than latching at 200.
+app.MapGet("/api/health/ready", async (WriteDbContext db, Npgsql.NpgsqlDataSource readDataSource, CancellationToken ct) =>
 {
-    categories = await db.Categories.CountAsync(ct),
-    products = await db.Products.CountAsync(ct),
-    managers = await db.Managers.CountAsync(ct),
-    customers = await db.Customers.CountAsync(ct),
-    sales = await db.Sales.CountAsync(ct),
-    saleItems = await db.SaleItems.CountAsync(ct),
-}));
+    try
+    {
+        var result = await ReadinessProbe.EvaluateAsync(db, readDataSource, ct);
+        return result.Ready
+            ? Results.Ok(new { status = result.Status })
+            : Results.Json(new { status = result.Status }, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+    catch (OperationCanceledException) when (ct.IsCancellationRequested)
+    {
+        throw;
+    }
+    catch
+    {
+        return Results.Json(new { status = "unavailable" }, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+});
 
-// Startup order: migrate → seed → mark ready. Runs before the app serves, so the port opens (and
-// readiness returns 200) only once the database is fully prepared.
+// The single composed dashboard snapshot. Accepts either ?preset=... or ?from=&to= (inclusive
+// date-only) — mixing them, or an invalid/inverted range, is a 400 ProblemDetails. All aggregation
+// happens server-side.
+app.MapGet("/api/dashboard", async (
+    string? preset, DateOnly? from, DateOnly? to, DashboardService dashboard, CancellationToken ct) =>
+{
+    try
+    {
+        return Results.Ok(await dashboard.BuildAsync(preset, from, to, ct));
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.Problem(title: "Invalid period", detail: ex.Message,
+            statusCode: StatusCodes.Status400BadRequest);
+    }
+});
+
+// Startup order: migrate → seed, before the app serves. The port opens only once the database is
+// migrated and seeded, so readiness answers truthfully from the first request.
 await app.Services.MigrateAndSeedAsync();
-app.Services.GetRequiredService<StartupState>().Ready = true;
 
 app.Run();
 

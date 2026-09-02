@@ -1439,3 +1439,309 @@ _(Consistency fixes + go-ahead for the seed/startup milestone. Verbatim.)_
 > * add focused seed/startup tests.
 >
 > Do not redesign the architecture or stop for confirmation unless implementation reveals a genuinely impossible requirement. Append this instruction verbatim to `AI_PROMPTS.md`, run the relevant build/tests, and commit meaningful completed milestones.
+
+---
+
+## 2026-09-02 ~10:15 — Claude Code / Opus 4.8
+
+_(Back-filled: this message was not logged when sent; time is approximate, from the surrounding commit history. Verbatim text.)_
+
+> давай ебаш дальше, я создал гитхаб репо, продолжай по плану, и когда закончишь создай пул реквест, я буду сам ревьюить и либо аппрувать, либо комменты оставлять и дальше с этим будем работать, просто сейчас поехал у другу потому что у него бабушка скончалась, и не могу полностью погрузиться в процесс с рабочего ПК, а дедлайн все ещё дедлайн, надо все доработать и сделать
+
+---
+
+## 2026-09-02 ~13:50 — Claude Code / Opus 4.8
+
+_(Back-filled: not logged when sent; time is approximate. Verbatim text.)_
+
+> продолжи работу, сессия была приостановлена из-за исчерпания лимите
+
+---
+
+## 2026-09-02 16:37 — Claude Code / Opus 4.8
+
+_(PR #1 review findings. Verbatim.)_
+
+> after finally coming back to my pc I reviewed your code and I have some issues to surface
+> First of all, my prompts, even if they are small, like "давай ебаш" or any other prompt, even this one that I am writing should be documented with time as it is done for other prompts already in AI_PROMPTS.
+>
+> Address the verified review findings on PR #1 only. Do not start another architecture cycle and do not add unrelated functionality.
+>
+> Preserve the current Git history. Do not amend, squash, rebase, reset, force-push, or replace already-published commits. Add focused corrective commits to the existing PR branch. Do not merge the PR.
+>
+> 1. Preserve migration lineage
+>
+> origin/master already contains 20260902041021_InitialSchema. The PR replaces it with 20260902061909_InitialSchema, which breaks databases initialized from master: EF attempts another initial migration and fails with PostgreSQL 42P07 because categories already exists.
+>
+> Restore/preserve the original committed migration identity and implement the required schema/column changes through an additive forward migration. Verify both:
+>
+> - a completely fresh database;
+> - an upgrade from an origin/master database containing data and the original migration-history row.
+>
+> Do not solve this by requiring clean volumes.
+>
+> 2. Prevent future-dated seed records
+>
+> DeterministicSeeder currently starts from the captured anchor instant and then adds up to 23:59:59, creating records after the anchor when dayOffset is zero.
+>
+> Generate timestamps within the selected reporting-calendar day while ensuring every sale satisfies occurred_at <= captured seed anchor. Preserve the fixed RNG, scale, distributions, transaction, and idempotency marker.
+>
+> Add a regression assertion that max(occurred_at) <= seed anchor.
+>
+> 3. Correct half-open trend bucketing
+>
+> PostgreSQL generate_series includes its stop value. Do not return a bucket whose bucketStart equals period.current.end.
+>
+> Add explicit tests for:
+>
+> - a one-day custom range;
+> - a complete 30/31-day custom range;
+> - Previous Month;
+> - exact expected bucket count;
+> - first bucket;
+> - last bucket strictly before current.end.
+>
+> Continue reconciling trend totals with summary totals.
+>
+> 4. Display the reporting timezone correctly
+>
+> The frontend currently formats dates with timeZone: 'UTC' while displaying “UTC+03:00 (MSK).”
+>
+> Format trend labels, tooltips, and Recent Sales timestamps in the documented reporting timezone. Verify that:
+>
+> - 2026-09-02T08:35:00Z displays as 11:35 MSK;
+> - an MSK-midnight bucket represented as 21:00Z displays as the following MSK calendar date.
+>
+> Add focused formatter/component tests.
+>
+> 5. Make readiness truthful
+>
+> /api/health/ready currently checks a permanently latched boolean and remains 200 after PostgreSQL stops.
+>
+> Implement a lightweight readiness check proving:
+>
+> - PostgreSQL is reachable;
+> - migrations/startup initialization completed;
+> - the expected seed version exists.
+>
+> Keep liveness separate. Add a test covering dependency loss or otherwise directly verify the readiness probe against an unavailable database. Avoid new infrastructure layers.
+>
+> 6. Restore the frozen summary contract
+>
+> Add Cost to the dashboard summary with current, previous, and percentage delta values. This does not require adding a seventh KPI card unless the frozen UI explicitly requires one.
+>
+> Return margin delta in actual percentage-point units:
+>
+> marginDeltaPp = (currentMargin - previousMargin) * 100
+>
+> Update the DTO/property naming, frontend formatting, README, API types, and tests together. The frontend must not multiply a field already expressed in percentage points.
+>
+> 7. Fix accessibility findings
+>
+> At 1440x900:
+>
+> - remove the app-owned serious color-contrast failures;
+> - make the internally scrolling manager-ranking list keyboard-focusable and visibly focused;
+> - keep status distinctions non-color-only;
+> - change ranking copy from “sales” to “Paid Sales”;
+> - render/announce Updating only while updating;
+> - associate invalid custom date inputs with their validation state/message.
+>
+> Do not expand into a mobile redesign; desktop remains the frozen target.
+>
+> 8. Complete small contract and documentation corrections
+>
+> - Reject mixed preset plus from/to requests with 400 ProblemDetails.
+> - Remove /api/meta/counts from the public production surface, or provide a concrete frozen-plan justification. Tests can inspect the database directly.
+> - Update AI_NOTES honestly with the final 16 backend tests, 6 frontend tests, analytics SQL reconciliation, Docker/web verification, browser verification, and the actual bugs caught. Remove the false “one consistent DB snapshot” claim unless an actual transaction provides it.
+> - Record the Npgsql UTC and PK-casing bugs if the PR description continues claiming they are recorded.
+> - Remove the unmatched trailing README code fence.
+> - Ignore generated *.tsbuildinfo and leave the worktree clean.
+> - Do not add CI, code splitting, SignalR, new projects, or other unrelated scope in this correction.
+>
+> Verification required before reporting completion:
+>
+> - clean build with zero errors;
+> - all backend tests;
+> - all frontend tests;
+> - production frontend build;
+> - fresh docker compose up --build;
+> - upgrade test from origin/master database to PR HEAD with data preserved;
+> - seed restart/idempotency;
+> - independent PostgreSQL reconciliation of Revenue, Cost, Gross Profit and Paid Sales;
+> - browser verification at 1440x900 for every preset, custom range, ranking switch, retained Updating state, Error/Retry and empty states;
+> - accessibility rerun for the identified contrast and keyboard issues;
+> - git diff --check;
+> - clean git status.
+>
+> Append this exact instruction verbatim to AI_PROMPTS.md. Update AI_NOTES only with verification actually performed.
+>
+> Commit the fixes as new, focused commits on the current PR branch. Then stop and report:
+>
+> 1. commit hashes;
+> 2. files changed by finding;
+> 3. exact test/build/Docker/upgrade results;
+> 4. any finding not fixed and the concrete reason.
+>
+> Do not declare the PR ready merely because existing tests pass.
+
+---
+
+## 2026-09-02 17:40 — Claude Code / Opus 4.8
+
+_(Second independent re-review of PR #1 at HEAD 3184b60. Verbatim.)_
+
+> I independently re-reviewed PR #1 at HEAD 3184b60. Do not merge, rewrite history, redesign the architecture, or add unrelated functionality. Address the following findings with additive commits on the existing branch.
+>
+> 1. Repair upgraded seed data
+> The corrected generator fixes fresh databases only. SeedVersion remains 1, so origin/master databases skip the correction and retain future-dated sales. In an actual upgrade, 12 sales remained after ops.seed_state.applied_at, with the latest 23:24:36 after the captured anchor.
+>
+> Implement a non-destructive upgrade repair that preserves sale/item IDs and counts. Do not clear and regenerate existing data merely by bumping the current destructive reseed path. Add an automated upgrade regression proving max(occurred_at) <= seed_state.applied_at after upgrading a v1 database.
+>
+> 2. Make readiness prove the latest migration
+> Connectivity plus seed v1 is insufficient because that marker predates RenameKeyColumnsToId. Reverting a live database to InitialSchema leaves readiness at 200 while /api/dashboard fails with PostgreSQL 42703.
+>
+> Readiness must return 503 when the expected/latest migration is absent or migrations are pending. Add a regression with a reachable seeded database that lacks the latest migration.
+>
+> 3. Finish frontend correctness and accessibility
+> - Change compact money formatting to the frozen $1.23M / $12.3K-style precision and add formatter tests.
+> - Replace the green/orange trend colors with colors meeting 4.5:1 for legend text and 3:1 for graph strokes. Manually verify unresolved axe contrast checks.
+> - Either implement a complete ARIA tab pattern for the ranking switch or use ordinary grouped buttons with aria-pressed.
+> - Let the ranking list fill the available card height instead of leaving blank space while forcing scrolling.
+> - Make asynchronously displayed request errors announced through alert/live semantics or managed focus.
+> - Use focus indicators with at least 3:1 contrast.
+>
+> 4. Correct tests and isolation
+> - Make the Retry test click Retry and prove a second request and successful recovery.
+> - Use a deferred request to verify retained prior data, aria-busy/Updating while pending, and removal after completion.
+> - Remove the process-global connection-string race between ReadinessTests and StartupTests, for example by putting them in one nonparallel collection or avoiding shared environment mutation.
+>
+> 5. Bound custom periods
+> Reject custom ranges beyond a documented reasonable maximum with 400 ProblemDetails so one request cannot generate tens of thousands of buckets and multi-megabyte responses.
+>
+> 6. Refresh runtime images
+> Move away from the frozen nginx:1.27-alpine runtime and use currently supported/patched base images. Rebuild with current manifests and rerun Docker Scout. Report any remaining upstream findings honestly; do not claim zero unless verified.
+>
+> 7. Correct public documentation
+> Update AI_NOTES with the Npgsql UTC and lowercase-PK bugs, the newly discovered upgrade/readiness defects, and only verification actually performed. Update the online PR description from 16/6 to the final test counts and include the corrective commits. Remove the claim that all findings are fixed until they are.
+>
+> Verification required:
+> - clean backend build and all backend tests;
+> - all frontend tests and production build;
+> - fresh Compose startup;
+> - real origin/master-to-HEAD upgrade preserving IDs/counts and repairing future rows;
+> - stale-migration readiness returns 503 while current schema returns 200;
+> - browser pass at 1440×900 including async states and ranking layout;
+> - manual plus automated accessibility verification;
+> - refreshed container scan;
+> - git diff --check and clean status.
+>
+> Append this instruction verbatim to AI_PROMPTS.md. Keep all commits additive, do not merge the PR, and report exact results and remaining caveats.
+
+## 2026-09-02 18:19:02 +05:00 — OpenAI Codex
+
+You are taking over the final corrective pass for the existing SalesDashboard take-home PR.
+
+Repository and PR context:
+- Saved project: E:\Work\GitProjects\SalesDashboard
+- Pull request: https://github.com/00008550/SalesDashboard/pull/1
+- Target branch: feat/dashboard-app
+- Expected starting HEAD: 33a6b5b4a37ce0fe9d510e27047b25f5fd4ece78
+- Assignment specification: E:\Work\DIJ-Market.md
+- The working tree was clean at handoff.
+- The user authorizes code, tests, documentation, focused additive commits, and pushing those commits to the existing PR branch.
+- Do not merge the PR. Do not amend, squash, rebase, reset, force-push, or rewrite published history.
+- Do not start another architecture cycle and do not add unrelated functionality, CI, authentication, mobile work, code splitting, or new projects.
+
+Prompt-log rule:
+Append this entire instruction verbatim to AI_PROMPTS.md under an honest current timestamp and an “OpenAI Codex” heading. Append only this new instruction. Do not reconstruct or back-fill any earlier missing prompts. Keep secrets and internal tool traces out of the log.
+
+First verify that HEAD and the online PR still match the expected state. Then address only the findings below.
+
+1. Make the legacy seed repair one-time and safe
+The current same-version repair in DeterministicSeeder classifies every sale with occurred_at > ops.seed_state.applied_at as a legacy seed defect on every startup. This silently corrupts legitimate sales created or imported after the initial seed. It was reproduced by inserting a valid Paid sale at applied_at + 2 days and restarting HEAD; the seeder moved it back into the original seed day.
+
+Replace the perpetual broad startup repair with a safe one-time forward repair, preferably an additive EF migration or an explicitly versioned/positively identified repair state. Preserve every sale/item id and all row counts. A normal post-seed sale must never be rewritten on later startup. Preserve the real origin/master upgrade behavior: the 12 legacy future-dated seed rows must become zero without destructive reseeding.
+
+Add regressions that prove:
+- a real/representative legacy v1 database is repaired with ids and counts preserved;
+- a legitimate post-seed sale remains byte-for-byte unchanged after one or more application/seeder restarts;
+- the repair is idempotent.
+
+2. Correct the 1440x900 ranking/grid layout
+The latest removal of max-height caused the 18-row ranking to determine both CSS-grid row heights. At 1440x900 the manager card measured 1228px, the list clientHeight equaled scrollHeight at 1169px, the page grew to 2280px, and large blank areas appeared in Trend, Categories, and Top Products. The element is labelled “scrollable” but no longer scrolls with PageDown.
+
+Constrain the spanning grid item/card correctly (inspect intrinsic min-size behavior; an outer min-h-0/overflow constraint may be part of the solution) so:
+- the left cards keep natural, compact heights;
+- the manager list uses available card height and becomes internally scrollable when needed;
+- keyboard focus plus PageDown/arrow scrolling works;
+- there is no large blank-card area;
+- the result is visually polished at exactly 1440x900.
+
+Do not merely move the blank space to another card. Measure and report card/list/page dimensions before and after.
+
+3. Finish custom-range UX and state accessibility
+The backend maximum is 731 inclusive days, but PeriodControls validates only from <= to. An over-limit range currently sends two identical 400 requests because every error is retried, waits about 1.5 seconds, then presents a Retry action that can only resend invalid input.
+
+Implement and test:
+- client-side inclusive-day validation matching the 731-day server contract;
+- aria-invalid/aria-describedby with a clear inline message for both inverted and over-limit ranges;
+- no request for a client-known invalid range;
+- preserve HTTP status in the API error type and do not retry non-transient 4xx responses;
+- Retry still works for a transient/server failure.
+
+Fix the remaining state-specific contrast failures:
+- invalid-range text currently uses rose-600 at approximately 4.48:1;
+- the applied custom-range chip uses slate-500 on slate-100 at approximately 4.34:1.
+Use colors that clearly pass 4.5:1 and run axe on default, valid-custom, invalid-custom, empty, updating, and error states—not only the default dashboard.
+
+4. Make the trend presentation contract explicit
+For long weekly custom periods, date_trunc('week', start) can produce a first bucketStart before period.current.start. Totals reconcile, but the response label is ambiguous. Either clip the first partial bucket label to the resolved current start without breaking aggregation, or explicitly document and test calendar-aligned partial weekly buckets. Prefer the least surprising API contract.
+
+Also give the data-bearing trend visualization an accessible name and a keyboard/screen-reader equivalent for its values (for example, a concise accessible description plus visually hidden tabular data). Do not rely only on pointer-hover tooltips.
+
+5. Remediate and report container packages truthfully
+The current PR/AI_NOTES statement that no fixed versions exist is false. Fresh scans report:
+- API: 2 critical / 7 high in openssl 3.5.7-r0, with fixed version 3.5.8-r0;
+- Web: 2 critical / 9 high, with fixed openssl 3.5.8-r0 and expat 2.8.4-r0.
+Those versions are currently available in the Alpine 3.24 repositories.
+
+Upgrade runtime packages during the Docker builds where appropriate, rebuild, and rerun Docker Scout. Correct the Dockerfile comment: ordinary docker compose up --build does not guarantee a base-image re-pull unless pull behavior is explicitly requested. Do not claim zero or “unfixable” unless the new scan proves it.
+
+6. Bring the public documentation into honest assignment compliance
+Do not back-fill old AI_PROMPTS entries; only append this instruction as stated above.
+
+Update AI_NOTES and README so they honestly disclose:
+- Claude Code as the primary implementation agent;
+- OpenAI Codex as the independent read-only reviewer/verifier that found the corrective issues;
+- what was delegated, what was manually challenged, and the real remaining caveats.
+
+AI_NOTES is currently about 167 lines despite the assignment asking for a short 10–30-line reflection. Condense it substantially into a genuine reflection rather than a chronological verification ledger, while preserving the important models/tools, delegation, rejected suggestions, genuine AI errors, and verification method.
+
+README must document:
+- the 731-inclusive-day custom-range maximum;
+- the exact current run/test instructions;
+- what was actually unfinished within the timebox, or an explicit honest statement that only the listed production follow-ups remain.
+Update the online PR description to match final reality and final test counts.
+
+7. Final verification
+Before declaring completion, independently run and report:
+- dotnet build -c Release with zero errors/warnings;
+- all backend tests, including the new data-preservation regressions;
+- npm clean install/audit, all frontend tests, and production build;
+- fresh docker compose up --build from a clean project/volume;
+- real origin/master-to-HEAD upgrade with counts and ID checksums preserved and legacy future rows repaired;
+- restart after inserting a legitimate post-seed sale, proving its timestamp is unchanged;
+- readiness for current schema, stale migration, database loss, and recovery;
+- independent SQL reconciliation of Revenue, Cost, Gross Profit, Paid Sales, trend, and categories;
+- live browser verification at 1440x900 for every preset, valid custom, over-limit custom, ranking switch, loading/updating, Error/Retry, empty states, keyboard scrolling, console/network, and axe across all relevant states;
+- Docker Scout after the package upgrade;
+- dotnet format --verify-no-changes, git diff --check, and a clean final worktree.
+
+Use focused additive commits, push them to feat/dashboard-app, update PR #1, do not merge it, and stop with:
+1. commit hashes by finding;
+2. files changed;
+3. exact verification evidence;
+4. any remaining caveat, stated honestly.
+
+Do not declare the PR ready merely because the existing tests pass.

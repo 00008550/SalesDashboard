@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SalesDashboard.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using SalesDashboard.Infrastructure.Persistence;
 namespace SalesDashboard.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(WriteDbContext))]
-    partial class WriteDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260902114025_RenameKeyColumnsToId")]
+    partial class RenameKeyColumnsToId
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -31,12 +34,6 @@ namespace SalesDashboard.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("AppliedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("applied_at");
-
-                    b.Property<int>("RepairVersion")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
-                        .HasColumnName("repair_version");
 
                     b.Property<int>("Version")
                         .HasColumnType("integer")

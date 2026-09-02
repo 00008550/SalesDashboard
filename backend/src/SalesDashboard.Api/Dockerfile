@@ -19,6 +19,13 @@ RUN dotnet publish backend/src/SalesDashboard.Api/SalesDashboard.Api.csproj -c R
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
 WORKDIR /app
 
+# Refresh the vulnerable OpenSSL runtime libraries from Alpine's signed repositories. The minimum
+# versions keep a stale mirror or cached package index from silently restoring the known-vulnerable
+# 3.5.7-r0 build while still allowing later security revisions.
+RUN apk add --no-cache --upgrade \
+      "libcrypto3>=3.5.8-r0" \
+      "libssl3>=3.5.8-r0"
+
 # The app runs in globalization-invariant mode (see Directory.Build.props), so Alpine's missing ICU
 # is fine and no icu packages are needed. The .NET runtime image already ships a non-root "app" user,
 # so we reuse it rather than creating one.

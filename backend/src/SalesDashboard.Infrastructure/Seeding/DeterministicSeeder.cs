@@ -30,6 +30,12 @@ public sealed class DeterministicSeeder(
     /// <summary>Bump to force a re-seed (the seeder clears and regenerates when the stored version differs).</summary>
     public const int SeedVersion = 1;
 
+    /// <summary>
+    /// The latest non-destructive forward repair applied to an existing seed version. This is kept
+    /// separate from <see cref="SeedVersion"/> so a repair never triggers destructive regeneration.
+    /// </summary>
+    public const int LatestRepairVersion = 1;
+
     private const int RngSeed = 73_939_133;
 
     public async Task SeedAsync(CancellationToken ct = default)
@@ -39,8 +45,29 @@ public sealed class DeterministicSeeder(
         var marker = await db.SeedState.FirstOrDefaultAsync(m => m.Id == 1, ct);
         if (marker is { } m && m.Version == SeedVersion)
         {
-            logger.LogInformation("Seed v{Version} already applied ({AppliedAt:u}); skipping.", m.Version, m.AppliedAt);
-            return; // transaction disposed without commit — nothing was written
+            if (m.RepairVersion < LatestRepairVersion)
+            {
+                // Migration 20260902170000 initializes existing v1 markers to repair version 0. The
+                // repair is therefore attempted once, then durably marked complete. It positively
+                // identifies legacy rows by both their deterministic v1 id and exact legacy timestamp;
+                // an unrelated sale after applied_at can never be swept up by this upgrade.
+                var repaired = await RepairLegacyV1FutureDatedSalesAsync(m.AppliedAt, ct);
+                m.RepairVersion = LatestRepairVersion;
+                await db.SaveChangesAsync(ct);
+                await tx.CommitAsync(ct);
+
+                logger.LogWarning(
+                    "Applied seed repair v{RepairVersion}: repaired {Count} positively identified legacy v1 sale(s) " +
+                    "without changing ids or counts.",
+                    LatestRepairVersion, repaired);
+            }
+            else
+            {
+                logger.LogInformation(
+                    "Seed v{Version} with repair v{RepairVersion} already applied ({AppliedAt:u}); skipping.",
+                    m.Version, m.RepairVersion, m.AppliedAt);
+            }
+            return;
         }
 
         // Re-seed path (version bump): clear in FK-safe order. No-op on a fresh database.
@@ -83,15 +110,96 @@ public sealed class DeterministicSeeder(
 
         // Marker written only after the full dataset persisted successfully, inside the same transaction.
         if (marker is null)
-            db.SeedState.Add(new SeedMarker { Id = 1, Version = SeedVersion, AppliedAt = anchor });
+            db.SeedState.Add(new SeedMarker
+            {
+                Id = 1,
+                Version = SeedVersion,
+                AppliedAt = anchor,
+                RepairVersion = LatestRepairVersion,
+            });
         else
         {
             marker.Version = SeedVersion;
             marker.AppliedAt = anchor;
+            marker.RepairVersion = LatestRepairVersion;
         }
         await db.SaveChangesAsync(ct);
 
         await tx.CommitAsync(ct);
+    }
+
+    // ---- upgrade repair ---------------------------------------------------------------------
+
+    /// <summary>
+    /// Repairs only rows that match the deterministic legacy-v1 generator by both id and exact
+    /// timestamp. Merely being later than <c>seed_state.applied_at</c> is deliberately insufficient:
+    /// that describes every legitimate sale created after the seed as well. Matching legacy rows are
+    /// deterministically repositioned into the elapsed portion of the anchor's MSK reporting day,
+    /// preserving every sale/item id and all row counts.
+    /// </summary>
+    private async Task<int> RepairLegacyV1FutureDatedSalesAsync(DateTimeOffset anchor, CancellationToken ct)
+    {
+        var candidates = BuildLegacyV1RepairPlan(anchor);
+        if (candidates.Count == 0)
+            return 0;
+
+        var byId = candidates.ToDictionary(c => c.SaleId);
+        var candidateIds = byId.Keys.ToArray();
+        var possibleMatches = await db.Sales.Where(s => candidateIds.Contains(s.Id)).ToListAsync(ct);
+
+        var repaired = 0;
+        foreach (var sale in possibleMatches)
+        {
+            var candidate = byId[sale.Id];
+            if (sale.OccurredAt != candidate.LegacyOccurredAt)
+                continue;
+
+            sale.OccurredAt = candidate.RepairedOccurredAt;
+            repaired++;
+        }
+
+        return repaired;
+    }
+
+    private sealed record LegacyV1RepairCandidate(
+        Guid SaleId,
+        DateTimeOffset LegacyOccurredAt,
+        DateTimeOffset RepairedOccurredAt);
+
+    /// <summary>
+    /// Replays the deterministic v1 generator in memory and returns only the rows exhibiting its
+    /// future-date defect. This is the positive signature used by the one-time repair.
+    /// </summary>
+    private IReadOnlyList<LegacyV1RepairCandidate> BuildLegacyV1RepairPlan(DateTimeOffset anchor)
+    {
+        anchor = anchor.ToUniversalTime();
+        var rng = new Random(RngSeed);
+        var categories = BuildCategories(rng);
+        var products = BuildProducts(rng, categories);
+        var managers = BuildManagers(rng);
+        var customers = BuildCustomers(rng);
+        var legacySales = BuildSales(rng, anchor, managers, customers, products, legacyV1Timestamps: true);
+
+        return legacySales
+            .Where(s => s.OccurredAt > anchor)
+            .Select(s => new LegacyV1RepairCandidate(
+                s.Id,
+                s.OccurredAt,
+                RepairedOccurredAt(s.Id, anchor)))
+            .ToList();
+    }
+
+    private static DateTimeOffset RepairedOccurredAt(Guid saleId, DateTimeOffset anchor)
+    {
+        var offset = TimeSpan.FromHours(3);
+        var dayStart = new DateTimeOffset(anchor.ToOffset(offset).Date, offset);
+        var span = anchor - dayStart; // elapsed portion of the anchor's MSK day (>= zero)
+
+        // A deterministic fraction in [0,1) from the sale id makes the result stable.
+        var fraction = BitConverter.ToUInt32(saleId.ToByteArray(), 0) / (uint.MaxValue + 1d);
+        var repaired = span > TimeSpan.Zero ? dayStart.AddTicks((long)(fraction * span.Ticks)) : dayStart;
+        var utcTicks = repaired.ToUniversalTime().Ticks;
+        return new DateTimeOffset(utcTicks - utcTicks % TimeSpan.TicksPerMicrosecond, TimeSpan.Zero);
     }
 
     // ---- generators -------------------------------------------------------------------------
@@ -164,8 +272,9 @@ public sealed class DeterministicSeeder(
          "Makarov", "Karpova", "Nikitin", "Titova"];
 
     private static readonly string[] Teams = ["North", "South", "East", "West", "Enterprise", "Channel"];
+    // Dark (700/800) shades so white avatar initials meet WCAG AA contrast.
     private static readonly string[] AvatarColors =
-        ["#2563EB", "#7C3AED", "#DB2777", "#059669", "#D97706", "#DC2626", "#0891B2", "#4F46E5", "#65A30D", "#EA580C"];
+        ["#1D4ED8", "#6D28D9", "#BE185D", "#047857", "#B45309", "#B91C1C", "#155E75", "#4338CA", "#3F6212", "#C2410C"];
 
     private List<Manager> BuildManagers(Random rng)
     {
@@ -226,7 +335,12 @@ public sealed class DeterministicSeeder(
         [0, 0.85, 0.80, 1.00, 1.05, 1.10, 0.95, 0.80, 0.90, 1.10, 1.25, 1.45, 1.30];
 
     private List<Sale> BuildSales(
-        Random rng, DateTimeOffset anchor, List<Manager> managers, List<Customer> customers, List<Product> products)
+        Random rng,
+        DateTimeOffset anchor,
+        List<Manager> managers,
+        List<Customer> customers,
+        List<Product> products,
+        bool legacyV1Timestamps = false)
     {
         // Per-manager strength → relative share of sales and a price/quantity bias. Strong and weak
         // managers, different average checks, all deterministic.
@@ -248,8 +362,29 @@ public sealed class DeterministicSeeder(
         {
             // Pick a day weighted by seasonality (0 = anchor day, up to windowDays ago).
             var dayOffset = PickWeightedDay(rng, anchor, windowDays);
-            var occurredAt = anchor.AddDays(-dayOffset)
-                .AddHours(rng.Next(0, 24)).AddMinutes(rng.Next(0, 60)).AddSeconds(rng.Next(0, 60));
+            DateTimeOffset occurredAt;
+            if (legacyV1Timestamps)
+            {
+                // Exact pre-fix v1 behavior, retained only to positively identify its rows during the
+                // one-time forward repair. Never use this branch to create persisted seed data.
+                occurredAt = anchor.AddDays(-dayOffset)
+                    .AddHours(rng.Next(0, 24)).AddMinutes(rng.Next(0, 60)).AddSeconds(rng.Next(0, 60));
+            }
+            else
+            {
+                // Place the sale within its MSK reporting-calendar day, but never after the captured
+                // anchor: for the anchor's own day only the elapsed portion is available, so no sale is
+                // ever future-dated relative to the seed instant.
+                var offset = TimeSpan.FromHours(3);
+                var dayStart = new DateTimeOffset(anchor.ToOffset(offset).Date.AddDays(-dayOffset), offset);
+                var dayEnd = dayStart.AddDays(1);
+                var cap = dayEnd < anchor ? dayEnd : anchor;
+                var span = cap - dayStart;
+                occurredAt = (span > TimeSpan.Zero
+                        ? dayStart.AddTicks((long)(rng.NextDouble() * span.Ticks))
+                        : dayStart)
+                    .ToUniversalTime();
+            }
 
             var mi = PickManager(rng, strength, totalStrength);
             // Respect blackout: a ~45-day gap for that manager.

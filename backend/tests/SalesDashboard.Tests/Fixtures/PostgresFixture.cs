@@ -35,7 +35,7 @@ public sealed class PostgresFixture : IAsyncLifetime
         return new NpgsqlConnectionStringBuilder(AdminConnectionString) { Database = dbName }.ConnectionString;
     }
 
-    private static DbContextOptions<WriteDbContext> OptionsFor(string connectionString) =>
+    public static DbContextOptions<WriteDbContext> OptionsFor(string connectionString) =>
         new DbContextOptionsBuilder<WriteDbContext>()
             .UseNpgsql(connectionString, npgsql => npgsql.MigrationsHistoryTable("__ef_migrations_history", "public"))
             .Options;

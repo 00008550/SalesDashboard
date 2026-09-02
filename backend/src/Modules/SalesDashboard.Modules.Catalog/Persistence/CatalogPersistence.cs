@@ -17,6 +17,7 @@ public sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
     {
         b.ToTable(CatalogSchema.CategoriesTable, CatalogSchema.Name);
         b.HasKey(c => c.Id);
+        b.Property(c => c.Id).HasColumnName("id");
         b.Property(c => c.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
         b.HasIndex(c => c.Name).IsUnique().HasDatabaseName("ux_categories_name");
     }
@@ -33,6 +34,7 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
             t.HasCheckConstraint("ck_products_base_cost_nonneg", "base_cost >= 0");
         });
         b.HasKey(p => p.Id);
+        b.Property(p => p.Id).HasColumnName("id");
         b.Property(p => p.Name).HasColumnName("name").HasMaxLength(150).IsRequired();
         b.Property(p => p.Sku).HasColumnName("sku").HasMaxLength(40).IsRequired();
         b.Property(p => p.CategoryId).HasColumnName("category_id").IsRequired();

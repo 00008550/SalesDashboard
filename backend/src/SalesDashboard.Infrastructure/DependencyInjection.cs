@@ -13,16 +13,16 @@ public static class InfrastructureServiceCollectionExtensions
     {
         services.AddSingleton(TimeProvider.System);
 
+        // One shared data source means readiness exercises and, after an outage, clears the same
+        // connection pool used by both EF's write/startup path and Dapper's dashboard reads.
+        services.AddSingleton(_ => NpgsqlDataSource.Create(connectionString));
+
         // Write side: EF Core owns migrations and seeding. One context, one migration history.
-        services.AddDbContext<WriteDbContext>(options =>
-            options.UseNpgsql(connectionString, npgsql =>
+        services.AddDbContext<WriteDbContext>((provider, options) =>
+            options.UseNpgsql(provider.GetRequiredService<NpgsqlDataSource>(), npgsql =>
                 npgsql.MigrationsHistoryTable("__ef_migrations_history", "public")));
 
         services.AddScoped<DeterministicSeeder>();
-
-        // Read side: a shared NpgsqlDataSource that Analytics opens connections from for Dapper reads.
-        // Registered here (not in Contracts) so Analytics depends on the Npgsql primitive directly.
-        services.AddSingleton(NpgsqlDataSource.Create(connectionString));
 
         return services;
     }
