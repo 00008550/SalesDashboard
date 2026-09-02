@@ -1,11 +1,12 @@
-# One command brings up the stack:  docker compose up --build
+# One command brings up the whole stack:  docker compose up --build
 #
 # Startup is ordered by health, not by sleeps:
-#   db healthy (pg_isready) -> api migrates + seeds, then serves and reports ready.
+#   db healthy (pg_isready) -> api migrates + seeds, then serves and reports ready -> web (nginx)
+#   serves the built SPA and proxies /api to the api container.
 #
-# The database port is deliberately NOT published to the host (nothing on the host needs it, and it
-# avoids clashing with other local Postgres instances). Only the API is published for now; the web
-# tier is added in the frontend milestone and will become the single published service.
+# Only the web tier is published to the host. The database port is not published (nothing on the
+# host needs it, and it avoids clashing with other local Postgres instances); the API is internal
+# and reached through the nginx proxy, so the browser only ever talks to one origin.
 name: salesdashboard
 
 services:
@@ -32,14 +33,28 @@ services:
         condition: service_healthy
     environment:
       ConnectionStrings__Default: "Host=db;Port=5432;Database=salesdashboard;Username=app;Password=app"
-    ports:
-      - "8080:8080" # temporary; the web tier will front the API in the frontend milestone
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/api/health/ready || exit 1"]
       interval: 10s
       timeout: 5s
       start_period: 120s
       retries: 6
+
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
 
 volumes:
   db-data:
