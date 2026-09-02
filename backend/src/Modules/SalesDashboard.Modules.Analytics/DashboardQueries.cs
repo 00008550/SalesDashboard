@@ -117,11 +117,14 @@ public sealed class DashboardQueries(NpgsqlDataSource dataSource)
                 GROUP BY 1
             ),
             buckets AS (
+                -- generate_series includes its stop value, so drop any bucket at/after the exclusive
+                -- end to keep the window half-open [start, end).
                 SELECT gs AS bucket_local
                 FROM generate_series(
                         date_trunc(@unit, (@start AT TIME ZONE 'Etc/GMT-3')),
                         (@end AT TIME ZONE 'Etc/GMT-3'),
                         @step::interval) AS gs
+                WHERE gs < (@end AT TIME ZONE 'Etc/GMT-3')
             )
             SELECT (b.bucket_local AT TIME ZONE 'Etc/GMT-3') AS bucket_start,
                    COALESCE(f.revenue, 0)::numeric AS revenue,
