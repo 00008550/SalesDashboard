@@ -185,4 +185,3 @@ fixes loop. The `.claude/` folder holds the agent roles (survey, implementation,
 and the authoritative skills (`sales-domain`, `analytics-verification`, `docker-verification`,
 `frontend-quality`). See [`AI_PROMPTS.md`](AI_PROMPTS.md) for the verbatim prompt log and
 [`AI_NOTES.md`](AI_NOTES.md) for the reflection, including genuine bugs the process caught.
-```

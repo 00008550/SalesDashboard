@@ -44,7 +44,9 @@ implementation:
 - **SignalR rejected after review** — it depended on an invented sample-sale mutation, not a real
   event source; removed from core scope and documented as a deliberate rejection.
 - **Dashboard endpoint simplification** — six independent read endpoints collapsed into one coherent
-  `GET /api/dashboard` snapshot (period resolved once; one consistent DB snapshot).
+  `GET /api/dashboard` response (the period is resolved once per request). Note: there is **no**
+  wrapping transaction/isolation level — the seeded dataset is static during evaluation, so a
+  "consistent DB snapshot" is not claimed.
 
 ## Where AI accelerated the work
 - Scaffolding (7 backend projects + the Vite app), the boilerplate-heavy EF configs and migration,
