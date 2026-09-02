@@ -1584,3 +1584,56 @@ _(PR #1 review findings. Verbatim.)_
 > 4. any finding not fixed and the concrete reason.
 >
 > Do not declare the PR ready merely because existing tests pass.
+
+---
+
+## 2026-09-02 17:40 — Claude Code / Opus 4.8
+
+_(Second independent re-review of PR #1 at HEAD 3184b60. Verbatim.)_
+
+> I independently re-reviewed PR #1 at HEAD 3184b60. Do not merge, rewrite history, redesign the architecture, or add unrelated functionality. Address the following findings with additive commits on the existing branch.
+>
+> 1. Repair upgraded seed data
+> The corrected generator fixes fresh databases only. SeedVersion remains 1, so origin/master databases skip the correction and retain future-dated sales. In an actual upgrade, 12 sales remained after ops.seed_state.applied_at, with the latest 23:24:36 after the captured anchor.
+>
+> Implement a non-destructive upgrade repair that preserves sale/item IDs and counts. Do not clear and regenerate existing data merely by bumping the current destructive reseed path. Add an automated upgrade regression proving max(occurred_at) <= seed_state.applied_at after upgrading a v1 database.
+>
+> 2. Make readiness prove the latest migration
+> Connectivity plus seed v1 is insufficient because that marker predates RenameKeyColumnsToId. Reverting a live database to InitialSchema leaves readiness at 200 while /api/dashboard fails with PostgreSQL 42703.
+>
+> Readiness must return 503 when the expected/latest migration is absent or migrations are pending. Add a regression with a reachable seeded database that lacks the latest migration.
+>
+> 3. Finish frontend correctness and accessibility
+> - Change compact money formatting to the frozen $1.23M / $12.3K-style precision and add formatter tests.
+> - Replace the green/orange trend colors with colors meeting 4.5:1 for legend text and 3:1 for graph strokes. Manually verify unresolved axe contrast checks.
+> - Either implement a complete ARIA tab pattern for the ranking switch or use ordinary grouped buttons with aria-pressed.
+> - Let the ranking list fill the available card height instead of leaving blank space while forcing scrolling.
+> - Make asynchronously displayed request errors announced through alert/live semantics or managed focus.
+> - Use focus indicators with at least 3:1 contrast.
+>
+> 4. Correct tests and isolation
+> - Make the Retry test click Retry and prove a second request and successful recovery.
+> - Use a deferred request to verify retained prior data, aria-busy/Updating while pending, and removal after completion.
+> - Remove the process-global connection-string race between ReadinessTests and StartupTests, for example by putting them in one nonparallel collection or avoiding shared environment mutation.
+>
+> 5. Bound custom periods
+> Reject custom ranges beyond a documented reasonable maximum with 400 ProblemDetails so one request cannot generate tens of thousands of buckets and multi-megabyte responses.
+>
+> 6. Refresh runtime images
+> Move away from the frozen nginx:1.27-alpine runtime and use currently supported/patched base images. Rebuild with current manifests and rerun Docker Scout. Report any remaining upstream findings honestly; do not claim zero unless verified.
+>
+> 7. Correct public documentation
+> Update AI_NOTES with the Npgsql UTC and lowercase-PK bugs, the newly discovered upgrade/readiness defects, and only verification actually performed. Update the online PR description from 16/6 to the final test counts and include the corrective commits. Remove the claim that all findings are fixed until they are.
+>
+> Verification required:
+> - clean backend build and all backend tests;
+> - all frontend tests and production build;
+> - fresh Compose startup;
+> - real origin/master-to-HEAD upgrade preserving IDs/counts and repairing future rows;
+> - stale-migration readiness returns 503 while current schema returns 200;
+> - browser pass at 1440×900 including async states and ranking layout;
+> - manual plus automated accessibility verification;
+> - refreshed container scan;
+> - git diff --check and clean status.
+>
+> Append this instruction verbatim to AI_PROMPTS.md. Keep all commits additive, do not merge the PR, and report exact results and remaining caveats.
