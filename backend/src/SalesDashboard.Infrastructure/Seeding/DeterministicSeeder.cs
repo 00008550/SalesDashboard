@@ -248,8 +248,16 @@ public sealed class DeterministicSeeder(
         {
             // Pick a day weighted by seasonality (0 = anchor day, up to windowDays ago).
             var dayOffset = PickWeightedDay(rng, anchor, windowDays);
-            var occurredAt = anchor.AddDays(-dayOffset)
-                .AddHours(rng.Next(0, 24)).AddMinutes(rng.Next(0, 60)).AddSeconds(rng.Next(0, 60));
+            // Place the sale within its MSK reporting-calendar day, but never after the captured
+            // anchor: for the anchor's own day only the elapsed portion is available, so no sale is
+            // ever future-dated relative to the seed instant.
+            var offset = TimeSpan.FromHours(3);
+            var dayStart = new DateTimeOffset(anchor.ToOffset(offset).Date.AddDays(-dayOffset), offset);
+            var dayEnd = dayStart.AddDays(1);
+            var cap = dayEnd < anchor ? dayEnd : anchor;
+            var span = cap - dayStart;
+            var occurredAt = (span > TimeSpan.Zero ? dayStart.AddTicks((long)(rng.NextDouble() * span.Ticks)) : dayStart)
+                .ToUniversalTime();
 
             var mi = PickManager(rng, strength, totalStrength);
             // Respect blackout: a ~45-day gap for that manager.

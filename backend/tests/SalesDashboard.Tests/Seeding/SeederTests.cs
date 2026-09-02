@@ -89,4 +89,17 @@ public sealed class SeederTests(PostgresFixture fx)
             await ra.Managers.OrderBy(m => m.Id).Select(m => m.FullName).ToListAsync(),
             await rb.Managers.OrderBy(m => m.Id).Select(m => m.FullName).ToListAsync());
     }
+
+    [Fact]
+    public async Task Seed_never_produces_records_after_the_anchor()
+    {
+        var anchor = new DateTimeOffset(2026, 6, 15, 9, 30, 0, TimeSpan.Zero);
+        var opts = await fx.NewMigratedDatabaseAsync();
+        await using (var db = new WriteDbContext(opts))
+            await Seeder(db, new FixedClock(anchor)).SeedAsync();
+
+        await using var read = new WriteDbContext(opts);
+        var max = await read.Sales.MaxAsync(s => s.OccurredAt);
+        Assert.True(max <= anchor, $"max occurred_at {max:o} must be <= anchor {anchor:o}");
+    }
 }
