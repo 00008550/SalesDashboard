@@ -87,7 +87,7 @@ describe('Dashboard', () => {
     expect(within(rankingSection()).getByText('GP Leader')).toBeInTheDocument();
     expect(within(rankingSection()).queryByText('AC Leader')).toBeNull();
 
-    await userEvent.click(screen.getByRole('tab', { name: /avg check/i }));
+    await userEvent.click(screen.getByRole('button', { name: /avg check/i }));
 
     expect(await within(rankingSection()).findByText('AC Leader')).toBeInTheDocument();
     expect(within(rankingSection()).queryByText('GP Leader')).toBeNull();
@@ -106,12 +106,67 @@ describe('Dashboard', () => {
     });
   });
 
-  it('shows an error state with a Retry action when the request fails', async () => {
-    fetchMock.mockResolvedValue({ ok: false, status: 500, json: async () => ({ detail: 'Boom' }) } as Response);
+  it('recovers when Retry is clicked: it issues a fresh request and renders the data', async () => {
+    const failure = { ok: false, status: 500, json: async () => ({ detail: 'Boom' }) } as Response;
+    // Initial load makes two attempts (retry: 1); both fail. Everything after recovers.
+    fetchMock
+      .mockResolvedValueOnce(failure)
+      .mockResolvedValueOnce(failure)
+      .mockResolvedValue({ ok: true, status: 200, json: async () => makeResponse() } as Response);
+
     renderDashboard();
-    expect(await screen.findByText(/couldn.t load the dashboard/i)).toBeInTheDocument();
-    expect(screen.getByText('Boom')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByText(/couldn.t load the dashboard/i)).toBeInTheDocument();
+    expect(within(alert).getByText('Boom')).toBeInTheDocument();
+    const callsBeforeRetry = fetchMock.mock.calls.length;
+
+    await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+    // Recovery: the data now renders and the error card is gone.
+    expect(await screen.findByText('Revenue')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+    // Retry issued at least one more request than the failed initial load.
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(callsBeforeRetry);
+  });
+
+  it('keeps the previous data and shows Updating while a period change is in flight', async () => {
+    // First load resolves immediately; the second request (after a period change) is deferred so we
+    // can inspect the in-flight state.
+    const firstLoad = makeResponse({
+      summary: { ...makeResponse().summary, revenue: { current: 1_234_000, previous: 800, changePercent: 0.25 } },
+    });
+    let resolveSecond: (r: Response) => void = () => {};
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => firstLoad } as Response)
+      .mockImplementationOnce(() => new Promise<Response>((resolve) => { resolveSecond = resolve; }));
+
+    renderDashboard();
+    await screen.findByText('Revenue');
+    expect(screen.getByText('$1.23M')).toBeInTheDocument(); // current revenue KPI from the first load
+
+    await userEvent.click(screen.getByRole('button', { name: 'Today' }));
+
+    // While the second request is pending: prior data is retained, Updating is announced, and the
+    // content region is marked busy.
+    const updating = await screen.findByText(/updating/i);
+    expect(updating).toBeInTheDocument();
+    expect(screen.getByText('$1.23M')).toBeInTheDocument(); // still the old snapshot
+    expect(document.querySelector('[aria-busy="true"]')).not.toBeNull();
+
+    // Complete the second request with new figures.
+    resolveSecond({
+      ok: true,
+      status: 200,
+      json: async () => makeResponse({
+        summary: { ...makeResponse().summary, revenue: { current: 5_678_000, previous: 800, changePercent: 1.5 } },
+      }),
+    } as Response);
+
+    // Updating clears and the busy flag is removed once the request completes.
+    await waitFor(() => expect(screen.queryByText(/updating/i)).toBeNull());
+    expect(document.querySelector('[aria-busy="true"]')).toBeNull();
+    expect(screen.getByText('$5.68M')).toBeInTheDocument();
   });
 
   it('shows an empty-period banner when there are no paid sales', async () => {

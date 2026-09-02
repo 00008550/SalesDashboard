@@ -9,7 +9,13 @@ namespace SalesDashboard.Tests.Startup;
 /// <summary>
 /// Readiness must reflect the live state of its dependencies, not a latched boolean. This test uses
 /// its own disposable PostgreSQL container so it can stop it mid-flight without affecting other tests.
+///
+/// It joins the "postgres" collection purely to serialize it against <see cref="StartupTests"/>: both
+/// drive <c>WebApplicationFactory</c> through the process-global <c>ConnectionStrings__Default</c>
+/// environment variable, so running them in parallel would let one clobber the other's connection
+/// string. Sharing a non-parallel collection removes that race without any shared environment state.
 /// </summary>
+[Collection("postgres")]
 public sealed class ReadinessTests
 {
     [Fact]
