@@ -164,8 +164,9 @@ public sealed class DeterministicSeeder(
          "Makarov", "Karpova", "Nikitin", "Titova"];
 
     private static readonly string[] Teams = ["North", "South", "East", "West", "Enterprise", "Channel"];
+    // Dark (700/800) shades so white avatar initials meet WCAG AA contrast.
     private static readonly string[] AvatarColors =
-        ["#2563EB", "#7C3AED", "#DB2777", "#059669", "#D97706", "#DC2626", "#0891B2", "#4F46E5", "#65A30D", "#EA580C"];
+        ["#1D4ED8", "#6D28D9", "#BE185D", "#047857", "#B45309", "#B91C1C", "#155E75", "#4338CA", "#3F6212", "#C2410C"];
 
     private List<Manager> BuildManagers(Random rng)
     {

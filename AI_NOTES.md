@@ -72,3 +72,32 @@ implementation:
   200, `/api/meta/counts` **reconciled against psql ground truth** (sales 3200, sale_items 5419,
   seed v1); api restart idempotent ("Seed v1 already applied … skipping"). Not taken on trust — the
   API numbers were cross-checked against SQL, and the restart proved idempotency.
+
+## PR #1 review — findings fixed and how they were verified
+An independent review of the PR caught real defects; all were fixed on the PR branch (no history
+rewrite) and verified:
+- **Migration lineage** — the PR had replaced the committed InitialSchema, which would break an
+  upgrade from `master`. Restored the original migration and moved the id-column change into an
+  additive `RenameKeyColumnsToId`. Verified an actual upgrade: a database seeded from `origin/master`
+  (history `…041021`, `Id` columns, 3200 sales) was brought up on PR HEAD — it applied only the
+  rename, kept **3200** sales, and the columns became `id`; a fresh clean start applies both.
+- **Future-dated seed rows** — the seeder could place a sale after the anchor. Fixed to clamp within
+  the MSK day and ≤ anchor; verified in the running DB (`future_dated_sales = 0`).
+- **Trend bucketing** included the half-open end bucket — fixed; tests assert exact bucket counts.
+- **Reporting-timezone dates** were formatted as UTC — fixed to MSK; formatter tests added.
+- **Latched readiness** returned 200 after Postgres stopped — replaced with a live check (DB
+  reachable + seed version present); a test stops a container and asserts 503.
+- **Summary contract** — added Cost; margin delta now in real percentage points (frontend no longer
+  multiplies).
+- **Accessibility** — verified with an **axe-core WCAG A/AA scan in the running app: 0 violations**
+  (fixed low-contrast toggle text on the slate-100 group, the "inactive" badge, and darkened the
+  avatar palette so white initials pass; the scrolling ranking list is keyboard-focusable).
+- **Contract/docs** — mixed preset+dates now 400; `/api/meta/counts` removed; stray README fence and
+  the false "consistent snapshot" note removed; `*.tsbuildinfo` ignored.
+
+**Final verification of the corrected PR:** backend `dotnet build` 0 warnings, **22/22 backend tests**
+pass (Testcontainers PostgreSQL); **9/9 frontend tests** pass; production frontend build clean; fresh
+`docker compose up --build` all three tiers healthy; the master→PR upgrade preserved data; seed
+restart idempotent; independent psql reconciliation of **Revenue, Cost, Gross Profit and Paid Sales**
+all matched the API exactly; browser pass at 1440×900 (render, ranking swap, empty state) with a clean
+console and 0 axe violations.

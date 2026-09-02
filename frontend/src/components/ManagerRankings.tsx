@@ -21,7 +21,7 @@ function Row({ row, mode }: { row: ManagerRankRow; mode: Mode }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <span className="truncate text-sm font-medium text-slate-800">{row.name}</span>
-          {!row.active && <span className="rounded bg-slate-100 px-1 text-[10px] font-medium text-slate-500">inactive</span>}
+          {!row.active && <span className="rounded bg-slate-200 px-1 text-[10px] font-medium text-slate-700">inactive</span>}
         </div>
         <div className="text-xs text-slate-500 tabular">
           {count(row.paidSales)} Paid Sales · {percentFromFraction(row.margin)} margin
@@ -48,7 +48,7 @@ export function ManagerRankings({ rankings }: { rankings: RankingsDto }) {
           aria-selected={mode === m}
           onClick={() => setMode(m)}
           className={`rounded-md px-2.5 py-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
-            mode === m ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            mode === m ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           {m === 'gp' ? 'Gross Profit' : 'Avg Check'}

@@ -18,7 +18,7 @@ export function PeriodControls({ period, onChange }: { period: Period; onChange:
               onClick={() => onChange({ kind: 'preset', preset: p.key })}
               aria-pressed={active}
               className={`rounded-md px-3 py-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
-                active ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                active ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               {p.label}
