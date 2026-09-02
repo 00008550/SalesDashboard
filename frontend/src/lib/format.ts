@@ -1,7 +1,10 @@
 // One fixed demo currency (USD). The backend owns every figure; these helpers only present them.
 
 const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const usdCompact = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 });
+// Compact money at a frozen 3-significant-figure precision: $1.23M, $12.3K, $123K, $950. Significant
+// digits (not fraction digits) keep the precision consistent across magnitudes and drop trailing
+// zeros ($1M, not $1.00M).
+const usdCompact = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumSignificantDigits: 3 });
 const int = new Intl.NumberFormat('en-US');
 
 export const money = (n: number): string => usd.format(n);

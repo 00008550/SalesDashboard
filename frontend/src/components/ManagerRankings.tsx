@@ -39,15 +39,18 @@ export function ManagerRankings({ rankings }: { rankings: RankingsDto }) {
   const [mode, setMode] = useState<Mode>('gp');
   const rows = mode === 'gp' ? rankings.grossProfit : rankings.averageCheck;
 
+  // Two ordinary toggle buttons in a labelled group, each reporting its state with aria-pressed. This
+  // avoids a half-implemented ARIA tablist (which would also need a tabpanel, arrow-key roving focus,
+  // and aria-controls) for what is simply a metric switch over one list.
   const toggle = (
-    <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-xs font-medium" role="tablist" aria-label="Ranking metric">
+    <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-xs font-medium" role="group" aria-label="Ranking metric">
       {(['gp', 'avg'] as const).map((m) => (
         <button
           key={m}
-          role="tab"
-          aria-selected={mode === m}
+          type="button"
+          aria-pressed={mode === m}
           onClick={() => setMode(m)}
-          className={`rounded-md px-2.5 py-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
+          className={`rounded-md px-2.5 py-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${
             mode === m ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
@@ -66,7 +69,7 @@ export function ManagerRankings({ rankings }: { rankings: RankingsDto }) {
         <ol
           tabIndex={0}
           aria-label={`Manager ranking by ${mode === 'gp' ? 'gross profit' : 'average check'} (scrollable)`}
-          className="max-h-[560px] flex-1 divide-y divide-slate-100 overflow-y-auto rounded-b-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400"
+          className="min-h-0 flex-1 divide-y divide-slate-100 overflow-y-auto rounded-b-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600"
         >
           {rows.map((r) => (
             <Row key={r.managerId} row={r} mode={mode} />

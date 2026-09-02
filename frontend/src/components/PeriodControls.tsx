@@ -17,7 +17,7 @@ export function PeriodControls({ period, onChange }: { period: Period; onChange:
               key={p.key}
               onClick={() => onChange({ kind: 'preset', preset: p.key })}
               aria-pressed={active}
-              className={`rounded-md px-3 py-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
+              className={`rounded-md px-3 py-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${
                 active ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -35,7 +35,7 @@ export function PeriodControls({ period, onChange }: { period: Period; onChange:
           onChange={(e) => setFrom(e.target.value)}
           aria-invalid={invalid || undefined}
           aria-describedby={invalid ? 'date-range-error' : undefined}
-          className={`rounded-md border bg-white px-2 py-1.5 text-sm text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${invalid ? 'border-rose-400' : 'border-slate-200'}`}
+          className={`rounded-md border bg-white px-2 py-1.5 text-sm text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${invalid ? 'border-rose-400' : 'border-slate-200'}`}
         />
         <span className="text-slate-500" aria-hidden>→</span>
         <input
@@ -45,12 +45,12 @@ export function PeriodControls({ period, onChange }: { period: Period; onChange:
           onChange={(e) => setTo(e.target.value)}
           aria-invalid={invalid || undefined}
           aria-describedby={invalid ? 'date-range-error' : undefined}
-          className={`rounded-md border bg-white px-2 py-1.5 text-sm text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${invalid ? 'border-rose-400' : 'border-slate-200'}`}
+          className={`rounded-md border bg-white px-2 py-1.5 text-sm text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${invalid ? 'border-rose-400' : 'border-slate-200'}`}
         />
         <button
           onClick={() => canApply && onChange({ kind: 'custom', from, to })}
           disabled={!canApply}
-          className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+          className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
         >
           Apply
         </button>

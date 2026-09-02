@@ -67,14 +67,16 @@ export function EmptyState({ message }: { message: string }) {
 }
 
 export function ErrorCard({ message, onRetry }: { message: string; onRetry: () => void }) {
+  // role="alert" (an assertive live region) announces the error to screen readers when it appears
+  // asynchronously after a failed refetch, without moving focus away from the user's control.
   return (
     <Card className="mt-4">
-      <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
+      <div role="alert" className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
         <div className="text-base font-semibold text-slate-800">Couldn’t load the dashboard</div>
         <p className="max-w-md text-sm text-slate-500">{message}</p>
         <button
           onClick={onRetry}
-          className="mt-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+          className="mt-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
         >
           Retry
         </button>

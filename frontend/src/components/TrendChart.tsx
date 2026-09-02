@@ -16,14 +16,17 @@ export function TrendChart({ data, granularity }: { data: TrendPoint[]; granular
         ) : (
           <ResponsiveContainer width="100%" height={288}>
             <ComposedChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
+              {/* Stroke/legend colors all meet WCAG AA (>=4.5:1 on white) so legend text is readable
+                  and the lines clear the 3:1 non-text minimum: revenue blue-700, gross profit
+                  emerald-700, paid sales amber-700. */}
               <defs>
                 <linearGradient id="rev" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#2563eb" stopOpacity={0.25} />
-                  <stop offset="100%" stopColor="#2563eb" stopOpacity={0} />
+                  <stop offset="0%" stopColor="#1d4ed8" stopOpacity={0.25} />
+                  <stop offset="100%" stopColor="#1d4ed8" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="gp" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.25} />
-                  <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                  <stop offset="0%" stopColor="#047857" stopOpacity={0.25} />
+                  <stop offset="100%" stopColor="#047857" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
@@ -40,9 +43,9 @@ export function TrendChart({ data, granularity }: { data: TrendPoint[]; granular
                 contentStyle={{ borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12 }}
               />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Area yAxisId="money" type="monotone" dataKey="revenue" name="Revenue" stroke="#2563eb" strokeWidth={2} fill="url(#rev)" />
-              <Area yAxisId="money" type="monotone" dataKey="grossProfit" name="Gross profit" stroke="#10b981" strokeWidth={2} fill="url(#gp)" />
-              <Line yAxisId="count" type="monotone" dataKey="paidSales" name="Paid sales" stroke="#f59e0b" strokeWidth={2} dot={false} />
+              <Area yAxisId="money" type="monotone" dataKey="revenue" name="Revenue" stroke="#1d4ed8" strokeWidth={2} fill="url(#rev)" />
+              <Area yAxisId="money" type="monotone" dataKey="grossProfit" name="Gross profit" stroke="#047857" strokeWidth={2} fill="url(#gp)" />
+              <Line yAxisId="count" type="monotone" dataKey="paidSales" name="Paid sales" stroke="#b45309" strokeWidth={2} dot={false} />
             </ComposedChart>
           </ResponsiveContainer>
         )}
