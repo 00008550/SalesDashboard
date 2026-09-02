@@ -95,8 +95,8 @@ windows are `[start, end)`, converted to UTC for SQL.
 | **Custom** | `[dayStart(from), dayStart(to + 1d))` from inclusive date-only input | immediately preceding equal-duration range: `[start − L, start)` where `L = end − start` |
 
 The response **echoes both resolved UTC windows** (current `{start,end}` and previous `{start,end}`)
-so the comparison is transparent and testable. Tests cover every preset, exact start/end boundary
-inclusion, and the This-month shorter-previous-month cap.
+so the comparison is transparent and testable. Tests must cover every preset, exact start/end
+boundary inclusion, and the This-month shorter-previous-month cap.
 
 ## 6. One-sale analytical grain — CRITICAL invariant
 
@@ -109,8 +109,8 @@ Sale → aggregate its SaleItems into sale-level revenue & cost
      → aggregate those one-row-per-Sale facts into dashboard metrics
 ```
 
-A Paid sale with 5 items is **one** Paid sale contributing one revenue/cost figure. This is proven
-by a dedicated test (a multi-item Paid sale must not inflate Paid Sales or Average Check).
+A Paid sale with 5 items is **one** Paid sale contributing one revenue/cost figure. This must be
+guarded by a dedicated test (a multi-item Paid sale must not inflate Paid Sales or Average Check).
 
 ## 7. Presentation semantics (frontend formats; backend still owns the numbers)
 

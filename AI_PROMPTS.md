@@ -1415,3 +1415,27 @@ _(Final consistency corrections. Verbatim — part of the evaluated AI workflow.
 >
 > Append this exact instruction to AI_PROMPTS.md verbatim.
 > After these corrections, proceed directly to implementation under the frozen plan. Do not ask for another architecture confirmation unless implementation exposes a genuine contradiction that makes the current plan impossible.
+
+---
+
+## 2026-09-02 09:29 — Claude Code / Opus 4.8
+
+_(Consistency fixes + go-ahead for the seed/startup milestone. Verbatim.)_
+
+> Milestone 2 is confirmed: the project graph is sound, and InitialSchema contains all five RESTRICT foreign keys, all five CHECK constraints, and `ops.seed_state`.
+> Before continuing, apply only these remaining consistency fixes:
+>
+> 1. Remove the EF Core projection option from `docs/PLAN.md` and `implementation-agent.md`. EF Core is write/migration/seed only; Analytics uses Npgsql/Dapper directly and references Contracts for DTOs.
+> 2. Clarify that only trend and categories reconcile with summary totals; limited top-N products do not.
+> 3. Standardize the readiness endpoint everywhere as `/api/health/ready`.
+> 4. Do not describe runtime wiring, seeding, tests, or agent/skill usage as completed until they actually exist. Update premature comments where necessary.
+>
+> Then continue immediately, without another architecture review:
+>
+> * implement the deterministic transactional seed;
+> * check the seed marker inside the transaction and write it only after the complete seed succeeds;
+> * wire startup as migration → seed → readiness;
+> * build and verify the early Docker vertical slice;
+> * add focused seed/startup tests.
+>
+> Do not redesign the architecture or stop for confirmation unless implementation reveals a genuinely impossible requirement. Append this instruction verbatim to `AI_PROMPTS.md`, run the relevant build/tests, and commit meaningful completed milestones.

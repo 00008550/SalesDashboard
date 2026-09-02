@@ -12,9 +12,10 @@ namespace SalesDashboard.Infrastructure.Persistence;
 /// <summary>
 /// The single write-side context. It deliberately aggregates the entity configurations that each
 /// domain module owns (via <c>ApplyConfigurationsFromAssembly</c>) rather than defining mappings
-/// here — so the modules keep ownership of their tables while the application keeps one migration
-/// history and one <c>MigrateAsync</c> on startup (a Docker-startup simplification, documented in
-/// README). The read side (Analytics) never uses this context; it reads through Dapper.
+/// here — so the modules keep ownership of their tables while the application can keep a single
+/// migration history and apply it with one <c>MigrateAsync</c> at startup (a deliberate
+/// Docker-startup simplification). The read side (Analytics) never uses this context; it reads
+/// through Npgsql/Dapper directly.
 /// </summary>
 public sealed class WriteDbContext(DbContextOptions<WriteDbContext> options) : DbContext(options)
 {

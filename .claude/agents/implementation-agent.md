@@ -20,8 +20,8 @@ correction) — do not add layers, projects, patterns, SignalR, an outbox, or SQ
 - Write or update the **relevant** tests (focused, high-value — not coverage-chasing).
 - Run focused verification: build the touched project(s), run the touched tests, and for analytics
   work cross-check against SQL per [`analytics-verification`](../skills/analytics-verification/SKILL.md).
-- Prefer Dapper/raw SQL for grouped aggregation, time bucketing, and ranking; EF Core where a
-  projection is simpler. Choose per query — not ideologically.
+- Analytics reads are **Dapper/raw SQL over Npgsql** (grouped aggregation, time bucketing, ranking),
+  returning Contract DTOs. **EF Core is write/migration/seed only — never use it in Analytics.**
 
 ## Boundaries
 - Do not redesign, refactor beyond the task, or "improve" unrelated code.

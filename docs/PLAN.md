@@ -18,7 +18,7 @@ projects (boundaries enforced by the reference graph). **No further layers/proje
 ```
 backend/
   src/
-    SalesDashboard.Api             host: minimal-API endpoint(s), startup migrate+seed, /health/ready, DI
+    SalesDashboard.Api             host: minimal-API endpoint(s), startup migrate+seed, /api/health/ready, DI
     SalesDashboard.Contracts       STABLE vocabulary ONLY: SaleStatus, dashboard request/response DTOs,
                                    small shared value types. No infrastructure plumbing.
     SalesDashboard.Infrastructure  WriteDbContext (aggregates module EF configs), single migration history,
@@ -68,11 +68,12 @@ formatting (USD, rounding, pp deltas) are all fixed in the skill. Do not reinter
 ## 3. Persistence & analytics approach
 - **Write side:** EF Core, module-owned `IEntityTypeConfiguration`s scanned into one `WriteDbContext`
   in `Infrastructure`. Single `MigrateAsync` on startup.
-- **Read side (Analytics):** depends directly on **Npgsql + Dapper** (no extra abstraction). Dapper/
-  raw SQL for grouped financial aggregation, time bucketing, and ranking/window functions; EF Core
-  projection only where that is simpler and equally clear. **No SQL views/adapter projects** merely to
-  purify the dependency graph. README states honestly: Analytics SQL is coupled to the PostgreSQL
-  **schema**, though not to EF entity types. Ranking `rank` and tie-breaking are computed server-side.
+- **Read side (Analytics):** depends directly on **Npgsql + Dapper** (no extra abstraction) and on
+  Contracts for the DTOs it returns. **EF Core is write/migration/seed only — Analytics does not use
+  it.** All analytical reads are Dapper/raw SQL (grouped financial aggregation, time bucketing,
+  ranking/window functions). **No SQL views/adapter projects** merely to purify the dependency graph.
+  README states honestly: Analytics SQL is coupled to the PostgreSQL **schema**, though not to EF
+  entity types. Ranking `rank` and tie-breaking are computed server-side.
 - **One-sale grain** enforced in every query (aggregate items → sale fact → status → dashboard),
   proven by a dedicated multi-item test.
 - **No isolation-level rule.** The seeded dataset is effectively static during evaluation; the request
@@ -140,7 +141,8 @@ One shared PG Testcontainer fixture + a small handcrafted dataset: a **multi-ite
 Cancelled sale, a Refunded sale, a manager with no sales, exact start & end boundary sales, a ranking
 tie, a zero-revenue period. Highest-value assertions: **sale count not inflated by SaleItems**,
 summary financials, status treatment, date boundaries, previous period (per preset), ranking/tie
-behavior, and trend/category/product totals reconciling with summary. Pure unit tests for the period
+behavior, and **trend and category totals reconciling with summary** (limited top-N products do not
+reconcile — assert their per-row correctness and ordering instead). Pure unit tests for the period
 resolver via a fake `TimeProvider`. Frontend (Vitest + Testing Library): period switch, ranking-mode
 switch, loading, error. Not chasing coverage.
 

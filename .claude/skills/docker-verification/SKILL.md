@@ -21,7 +21,7 @@ Watch the startup ordering resolve on its own (healthchecks, not sleeps):
 2. **api** waits for db-healthy, then **applies migrations** and **runs the deterministic seed inside
    one transaction**.
 3. **api readiness** flips to healthy **only after migration + seed succeed** — `pg_isready` alone is
-   not sufficient; `/health/ready` must report the app is actually ready.
+   not sufficient; `/api/health/ready` must report the app is actually ready.
 4. **web** waits for api-healthy, serves the SPA, and proxies `/api` to the api container.
 
 ## Assertions (each must hold with no manual command)
