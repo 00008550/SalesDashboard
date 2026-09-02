@@ -8,7 +8,9 @@ RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
-FROM nginx:1.27-alpine AS runtime
+# Pinned to the current nginx line (1.31, on alpine 3.24) rather than a frozen older minor, so the
+# runtime keeps receiving upstream security patches. Rebuild re-pulls the latest 1.31-alpine manifest.
+FROM nginx:1.31-alpine AS runtime
 
 # nginx serves the built SPA and proxies /api to the api container (see nginx.conf).
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
