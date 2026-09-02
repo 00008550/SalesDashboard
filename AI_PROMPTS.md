@@ -1439,3 +1439,148 @@ _(Consistency fixes + go-ahead for the seed/startup milestone. Verbatim.)_
 > * add focused seed/startup tests.
 >
 > Do not redesign the architecture or stop for confirmation unless implementation reveals a genuinely impossible requirement. Append this instruction verbatim to `AI_PROMPTS.md`, run the relevant build/tests, and commit meaningful completed milestones.
+
+---
+
+## 2026-09-02 ~10:15 — Claude Code / Opus 4.8
+
+_(Back-filled: this message was not logged when sent; time is approximate, from the surrounding commit history. Verbatim text.)_
+
+> давай ебаш дальше, я создал гитхаб репо, продолжай по плану, и когда закончишь создай пул реквест, я буду сам ревьюить и либо аппрувать, либо комменты оставлять и дальше с этим будем работать, просто сейчас поехал у другу потому что у него бабушка скончалась, и не могу полностью погрузиться в процесс с рабочего ПК, а дедлайн все ещё дедлайн, надо все доработать и сделать
+
+---
+
+## 2026-09-02 ~13:50 — Claude Code / Opus 4.8
+
+_(Back-filled: not logged when sent; time is approximate. Verbatim text.)_
+
+> продолжи работу, сессия была приостановлена из-за исчерпания лимите
+
+---
+
+## 2026-09-02 16:37 — Claude Code / Opus 4.8
+
+_(PR #1 review findings. Verbatim.)_
+
+> after finally coming back to my pc I reviewed your code and I have some issues to surface
+> First of all, my prompts, even if they are small, like "давай ебаш" or any other prompt, even this one that I am writing should be documented with time as it is done for other prompts already in AI_PROMPTS.
+>
+> Address the verified review findings on PR #1 only. Do not start another architecture cycle and do not add unrelated functionality.
+>
+> Preserve the current Git history. Do not amend, squash, rebase, reset, force-push, or replace already-published commits. Add focused corrective commits to the existing PR branch. Do not merge the PR.
+>
+> 1. Preserve migration lineage
+>
+> origin/master already contains 20260902041021_InitialSchema. The PR replaces it with 20260902061909_InitialSchema, which breaks databases initialized from master: EF attempts another initial migration and fails with PostgreSQL 42P07 because categories already exists.
+>
+> Restore/preserve the original committed migration identity and implement the required schema/column changes through an additive forward migration. Verify both:
+>
+> - a completely fresh database;
+> - an upgrade from an origin/master database containing data and the original migration-history row.
+>
+> Do not solve this by requiring clean volumes.
+>
+> 2. Prevent future-dated seed records
+>
+> DeterministicSeeder currently starts from the captured anchor instant and then adds up to 23:59:59, creating records after the anchor when dayOffset is zero.
+>
+> Generate timestamps within the selected reporting-calendar day while ensuring every sale satisfies occurred_at <= captured seed anchor. Preserve the fixed RNG, scale, distributions, transaction, and idempotency marker.
+>
+> Add a regression assertion that max(occurred_at) <= seed anchor.
+>
+> 3. Correct half-open trend bucketing
+>
+> PostgreSQL generate_series includes its stop value. Do not return a bucket whose bucketStart equals period.current.end.
+>
+> Add explicit tests for:
+>
+> - a one-day custom range;
+> - a complete 30/31-day custom range;
+> - Previous Month;
+> - exact expected bucket count;
+> - first bucket;
+> - last bucket strictly before current.end.
+>
+> Continue reconciling trend totals with summary totals.
+>
+> 4. Display the reporting timezone correctly
+>
+> The frontend currently formats dates with timeZone: 'UTC' while displaying “UTC+03:00 (MSK).”
+>
+> Format trend labels, tooltips, and Recent Sales timestamps in the documented reporting timezone. Verify that:
+>
+> - 2026-09-02T08:35:00Z displays as 11:35 MSK;
+> - an MSK-midnight bucket represented as 21:00Z displays as the following MSK calendar date.
+>
+> Add focused formatter/component tests.
+>
+> 5. Make readiness truthful
+>
+> /api/health/ready currently checks a permanently latched boolean and remains 200 after PostgreSQL stops.
+>
+> Implement a lightweight readiness check proving:
+>
+> - PostgreSQL is reachable;
+> - migrations/startup initialization completed;
+> - the expected seed version exists.
+>
+> Keep liveness separate. Add a test covering dependency loss or otherwise directly verify the readiness probe against an unavailable database. Avoid new infrastructure layers.
+>
+> 6. Restore the frozen summary contract
+>
+> Add Cost to the dashboard summary with current, previous, and percentage delta values. This does not require adding a seventh KPI card unless the frozen UI explicitly requires one.
+>
+> Return margin delta in actual percentage-point units:
+>
+> marginDeltaPp = (currentMargin - previousMargin) * 100
+>
+> Update the DTO/property naming, frontend formatting, README, API types, and tests together. The frontend must not multiply a field already expressed in percentage points.
+>
+> 7. Fix accessibility findings
+>
+> At 1440x900:
+>
+> - remove the app-owned serious color-contrast failures;
+> - make the internally scrolling manager-ranking list keyboard-focusable and visibly focused;
+> - keep status distinctions non-color-only;
+> - change ranking copy from “sales” to “Paid Sales”;
+> - render/announce Updating only while updating;
+> - associate invalid custom date inputs with their validation state/message.
+>
+> Do not expand into a mobile redesign; desktop remains the frozen target.
+>
+> 8. Complete small contract and documentation corrections
+>
+> - Reject mixed preset plus from/to requests with 400 ProblemDetails.
+> - Remove /api/meta/counts from the public production surface, or provide a concrete frozen-plan justification. Tests can inspect the database directly.
+> - Update AI_NOTES honestly with the final 16 backend tests, 6 frontend tests, analytics SQL reconciliation, Docker/web verification, browser verification, and the actual bugs caught. Remove the false “one consistent DB snapshot” claim unless an actual transaction provides it.
+> - Record the Npgsql UTC and PK-casing bugs if the PR description continues claiming they are recorded.
+> - Remove the unmatched trailing README code fence.
+> - Ignore generated *.tsbuildinfo and leave the worktree clean.
+> - Do not add CI, code splitting, SignalR, new projects, or other unrelated scope in this correction.
+>
+> Verification required before reporting completion:
+>
+> - clean build with zero errors;
+> - all backend tests;
+> - all frontend tests;
+> - production frontend build;
+> - fresh docker compose up --build;
+> - upgrade test from origin/master database to PR HEAD with data preserved;
+> - seed restart/idempotency;
+> - independent PostgreSQL reconciliation of Revenue, Cost, Gross Profit and Paid Sales;
+> - browser verification at 1440x900 for every preset, custom range, ranking switch, retained Updating state, Error/Retry and empty states;
+> - accessibility rerun for the identified contrast and keyboard issues;
+> - git diff --check;
+> - clean git status.
+>
+> Append this exact instruction verbatim to AI_PROMPTS.md. Update AI_NOTES only with verification actually performed.
+>
+> Commit the fixes as new, focused commits on the current PR branch. Then stop and report:
+>
+> 1. commit hashes;
+> 2. files changed by finding;
+> 3. exact test/build/Docker/upgrade results;
+> 4. any finding not fixed and the concrete reason.
+>
+> Do not declare the PR ready merely because existing tests pass.
