@@ -27,6 +27,14 @@ public static class PeriodResolver
     public static readonly TimeSpan ReportingOffset = TimeSpan.FromHours(3);
     public const string TimezoneLabel = "UTC+03:00 (MSK)";
 
+    /// <summary>
+    /// The largest custom range we resolve, inclusive-day count. Two years comfortably covers the
+    /// seeded ~12-month dataset and any reasonable comparison, while bounding the response: it caps the
+    /// trend at weekly granularity (~105 buckets) so a single request can never fan out into tens of
+    /// thousands of buckets and a multi-megabyte payload. Anything larger is rejected with 400.
+    /// </summary>
+    public const int MaxCustomRangeDays = 731;
+
     public static readonly IReadOnlySet<string> Presets =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "today", "last7", "last30", "thisMonth", "prevMonth" };
 
@@ -91,6 +99,12 @@ public static class PeriodResolver
     public static ResolvedPeriod ResolveCustom(DateOnly from, DateOnly to)
     {
         if (to < from) throw new ArgumentException("'to' must not be earlier than 'from'.", nameof(to));
+
+        // Inclusive-day span. Bound it so one request cannot generate an unbounded number of buckets.
+        var inclusiveDays = to.DayNumber - from.DayNumber + 1;
+        if (inclusiveDays > MaxCustomRangeDays)
+            throw new ArgumentException(
+                $"Custom range spans {inclusiveDays} days, exceeding the maximum of {MaxCustomRangeDays} days.", nameof(to));
 
         var start = MskMidnight(from.Year, from.Month, from.Day);
         var endExclusiveDay = to.AddDays(1);

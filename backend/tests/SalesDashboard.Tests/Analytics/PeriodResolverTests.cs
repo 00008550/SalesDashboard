@@ -90,6 +90,23 @@ public sealed class PeriodResolverTests
         Assert.Throws<ArgumentException>(() => PeriodResolver.ResolveCustom(new DateOnly(2026, 6, 30), new DateOnly(2026, 6, 1)));
 
     [Fact]
+    public void Custom_accepts_a_range_at_the_maximum_span()
+    {
+        var from = new DateOnly(2025, 1, 1);
+        var to = from.AddDays(PeriodResolver.MaxCustomRangeDays - 1); // inclusive-day count == max
+        var p = PeriodResolver.ResolveCustom(from, to);
+        Assert.Equal("custom", p.Preset);
+    }
+
+    [Fact]
+    public void Custom_rejects_a_range_beyond_the_maximum_span()
+    {
+        var from = new DateOnly(2025, 1, 1);
+        var to = from.AddDays(PeriodResolver.MaxCustomRangeDays); // one day too many
+        Assert.Throws<ArgumentException>(() => PeriodResolver.ResolveCustom(from, to));
+    }
+
+    [Fact]
     public void Unknown_preset_throws() =>
         Assert.Throws<ArgumentException>(() => PeriodResolver.ResolvePreset("yesteryear", Now));
 }
