@@ -2,8 +2,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using SalesDashboard.Infrastructure.Persistence;
+using SalesDashboard.Infrastructure.Seeding;
 using SalesDashboard.Infrastructure.Startup;
 using SalesDashboard.Tests.Fixtures;
 
@@ -50,15 +52,27 @@ public sealed class ReadinessProbeTests(PostgresFixture fx)
             Assert.Equal("migrations_pending", stale.Status);
         }
 
-        // After applying the remaining migration, the same reachable, seeded database is ready.
+        // Applying the schema migration exposes a separate required data-repair state. A v1 marker
+        // is not ready until the one-time repair has completed.
         await using (var db = new WriteDbContext(opts))
             await db.Database.MigrateAsync();
 
         await using (var db = new WriteDbContext(opts))
         {
-            var current = await ReadinessProbe.EvaluateAsync(db);
-            Assert.True(current.Ready);
-            Assert.Equal("ready", current.Status);
+            var repairPending = await ReadinessProbe.EvaluateAsync(db);
+            Assert.False(repairPending.Ready);
+            Assert.Equal("seed_repair_pending", repairPending.Status);
+        }
+
+        await using (var db = new WriteDbContext(opts))
+            await new DeterministicSeeder(db, TimeProvider.System, NullLogger<DeterministicSeeder>.Instance)
+                .SeedAsync();
+
+        await using (var db = new WriteDbContext(opts))
+        {
+            var repaired = await ReadinessProbe.EvaluateAsync(db);
+            Assert.True(repaired.Ready);
+            Assert.Equal("ready", repaired.Status);
         }
     }
 }

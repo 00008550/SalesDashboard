@@ -14,6 +14,7 @@ public sealed class SeedMarker
     public int Id { get; set; }
     public int Version { get; set; }
     public DateTimeOffset AppliedAt { get; set; }
+    public int RepairVersion { get; set; }
 }
 
 public sealed class SeedMarkerConfiguration : IEntityTypeConfiguration<SeedMarker>
@@ -25,5 +26,6 @@ public sealed class SeedMarkerConfiguration : IEntityTypeConfiguration<SeedMarke
         b.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
         b.Property(x => x.Version).HasColumnName("version").IsRequired();
         b.Property(x => x.AppliedAt).HasColumnName("applied_at").IsRequired();
+        b.Property(x => x.RepairVersion).HasColumnName("repair_version").HasDefaultValue(0).IsRequired();
     }
 }

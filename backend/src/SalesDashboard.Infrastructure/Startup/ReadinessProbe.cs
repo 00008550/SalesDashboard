@@ -18,7 +18,7 @@ public readonly record struct ReadinessResult(bool Ready, string Status);
 /// <c>RenameKeyColumnsToId</c>, so a database reverted to <c>InitialSchema</c> would still carry a v1
 /// marker while <c>/api/dashboard</c> fails with <c>42703</c>. Requiring an empty pending set closes
 /// that gap.</item>
-/// <item>The expected seed version is present.</item>
+/// <item>The expected seed version and its latest non-destructive repair are present.</item>
 /// </list>
 ///
 /// It re-evaluates on every probe, so it flips back to not-ready if PostgreSQL later becomes
@@ -37,7 +37,12 @@ public static class ReadinessProbe
         if (pending.Any())
             return new ReadinessResult(false, "migrations_pending");
 
-        var seeded = await db.SeedState.AnyAsync(m => m.Version == DeterministicSeeder.SeedVersion, ct);
-        return seeded ? new ReadinessResult(true, "ready") : new ReadinessResult(false, "not_seeded");
+        var marker = await db.SeedState.SingleOrDefaultAsync(m => m.Id == 1, ct);
+        if (marker is null || marker.Version != DeterministicSeeder.SeedVersion)
+            return new ReadinessResult(false, "not_seeded");
+        if (marker.RepairVersion < DeterministicSeeder.LatestRepairVersion)
+            return new ReadinessResult(false, "seed_repair_pending");
+
+        return new ReadinessResult(true, "ready");
     }
 }
