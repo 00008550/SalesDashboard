@@ -18,7 +18,13 @@ requirements → survey → architecture → implementation → **database verif
 tests are treated as necessary, not sufficient.
 
 ## What I delegated vs. designed myself
-- _(to be filled in during implementation)_
+- **Delegated to the agent:** the bulk of the mechanical implementation — EF configurations and the
+  migration, the deterministic seed generator, the Dapper analytical SQL, the React components and
+  Tailwind styling, and both test suites.
+- **I owned the design and every judgement call:** the modular boundaries and what to reject
+  (SignalR, outbox, CQRS), the frozen business/date semantics, the one-sale-grain invariant, the
+  single composed endpoint, server-side ranking, the seed strategy, and the Docker topology. I drove
+  the survey → review → fix loop and verified results against ground truth rather than trusting them.
 - Design decisions I own and must be able to defend: the **lightweight modular-monolith boundaries**
   (Sales / Catalog / People / Analytics, Analytics reading via `Contracts` with selective Dapper),
   the single-write-context + single-migration-history trade-off, the **one-sale analytical grain**
@@ -41,7 +47,10 @@ implementation:
   `GET /api/dashboard` snapshot (period resolved once; one consistent DB snapshot).
 
 ## Where AI accelerated the work
-- _(to be filled in)_
+- Scaffolding (7 backend projects + the Vite app), the boilerplate-heavy EF configs and migration,
+  the seed generator, the six analytical queries with their trend bucketing, and the React component
+  set — all produced quickly, leaving my time for the semantics, boundaries, and verification.
+- Fast, honest debugging of the genuine bugs listed above once tests/psql/Docker exposed them.
 
 ## Where AI got it wrong / what I changed or rejected (genuine, caught during implementation)
 - **Stale initial migration**: the first-pass migration had only 1 of 5 FKs (as CASCADE) and no CHECK
