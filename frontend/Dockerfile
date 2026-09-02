@@ -8,9 +8,17 @@ RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
-# Pinned to the current nginx line (1.31, on alpine 3.24) rather than a frozen older minor, so the
-# runtime keeps receiving upstream security patches. Rebuild re-pulls the latest 1.31-alpine manifest.
+# Use the selected nginx line on Alpine 3.24. A normal `docker compose up --build` may reuse a local
+# base-image manifest; use `docker compose build --pull` when a fresh upstream manifest is required.
 FROM nginx:1.31-alpine AS runtime
+
+# Refresh the vulnerable runtime libraries from Alpine's signed repositories. These lower bounds
+# include the fixes for the OpenSSL 3.5.7-r0 and libexpat 2.8.2-r0 findings while allowing later
+# security revisions.
+RUN apk add --no-cache --upgrade \
+      "libcrypto3>=3.5.8-r0" \
+      "libssl3>=3.5.8-r0" \
+      "libexpat>=2.8.4-r0"
 
 # nginx serves the built SPA and proxies /api to the api container (see nginx.conf).
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
