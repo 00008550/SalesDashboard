@@ -1,6 +1,13 @@
 import type { DashboardResponse } from './types';
 import { type Period, periodToQuery } from '../state/period';
 
+export class DashboardApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+    this.name = 'DashboardApiError';
+  }
+}
+
 /**
  * Fetches the single composed dashboard snapshot. On a non-2xx it reads the ProblemDetails body for
  * a human message so the UI can show something meaningful (not just a status code).
@@ -15,7 +22,7 @@ export async function fetchDashboard(period: Period, signal?: AbortSignal): Prom
     } catch {
       /* non-JSON error body — keep the default message */
     }
-    throw new Error(detail);
+    throw new DashboardApiError(detail, res.status);
   }
   return (await res.json()) as DashboardResponse;
 }

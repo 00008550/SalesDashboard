@@ -1,10 +1,12 @@
-import { useState } from 'react';
-import { type Period, PRESETS } from '../state/period';
+import { useId, useState } from 'react';
+import { customRangeValidationMessage, type Period, PRESETS } from '../state/period';
 
 export function PeriodControls({ period, onChange }: { period: Period; onChange: (p: Period) => void }) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
-  const invalid = from !== '' && to !== '' && from > to;
+  const errorId = useId();
+  const validationMessage = customRangeValidationMessage(from, to);
+  const invalid = validationMessage !== null;
   const canApply = from !== '' && to !== '' && !invalid;
 
   return (
@@ -34,8 +36,8 @@ export function PeriodControls({ period, onChange }: { period: Period; onChange:
           value={from}
           onChange={(e) => setFrom(e.target.value)}
           aria-invalid={invalid || undefined}
-          aria-describedby={invalid ? 'date-range-error' : undefined}
-          className={`rounded-md border bg-white px-2 py-1.5 text-sm text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${invalid ? 'border-rose-400' : 'border-slate-200'}`}
+          aria-describedby={invalid ? errorId : undefined}
+          className={`rounded-md border bg-white px-2 py-1.5 text-sm text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${invalid ? 'border-rose-600' : 'border-slate-200'}`}
         />
         <span className="text-slate-500" aria-hidden>→</span>
         <input
@@ -44,8 +46,8 @@ export function PeriodControls({ period, onChange }: { period: Period; onChange:
           value={to}
           onChange={(e) => setTo(e.target.value)}
           aria-invalid={invalid || undefined}
-          aria-describedby={invalid ? 'date-range-error' : undefined}
-          className={`rounded-md border bg-white px-2 py-1.5 text-sm text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${invalid ? 'border-rose-400' : 'border-slate-200'}`}
+          aria-describedby={invalid ? errorId : undefined}
+          className={`rounded-md border bg-white px-2 py-1.5 text-sm text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${invalid ? 'border-rose-600' : 'border-slate-200'}`}
         />
         <button
           onClick={() => canApply && onChange({ kind: 'custom', from, to })}
@@ -57,12 +59,12 @@ export function PeriodControls({ period, onChange }: { period: Period; onChange:
       </div>
 
       {invalid && (
-        <span id="date-range-error" role="alert" className="text-xs text-rose-600">
-          “From” must be on or before “To”.
+        <span id={errorId} role="alert" className="text-xs font-medium text-rose-700">
+          {validationMessage}
         </span>
       )}
       {period.kind === 'custom' && !invalid && (
-        <span className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-500 tabular">
+        <span className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-700 tabular">
           {period.from} → {period.to}
         </span>
       )}

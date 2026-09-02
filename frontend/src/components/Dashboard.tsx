@@ -44,15 +44,25 @@ function DashboardContent({ data }: { data: DashboardResponse }) {
         </div>
       )}
       <KpiCards summary={data.summary} />
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <TrendChart data={data.trend} granularity={data.period.granularity} />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-stretch">
+        <div className="grid min-w-0 gap-4 lg:col-span-2 lg:grid-cols-2 lg:items-start">
+          <div className="min-w-0 lg:col-span-2">
+            <TrendChart data={data.trend} granularity={data.period.granularity} />
+          </div>
+          <div className="min-w-0 self-start">
+            <Categories categories={data.categories} />
+          </div>
+          <div className="min-w-0 self-start">
+            <TopProducts products={data.topProducts} />
+          </div>
         </div>
-        <div className="lg:row-span-2">
-          <ManagerRankings rankings={data.rankings} />
+        {/* The desktop ranking is taken out of intrinsic row sizing. The grid row is therefore sized
+            by the compact left-hand cards, while this wrapper stretches to that resolved height. */}
+        <div className="min-h-0 lg:relative lg:overflow-hidden">
+          <div className="h-full min-h-0 lg:absolute lg:inset-0">
+            <ManagerRankings rankings={data.rankings} />
+          </div>
         </div>
-        <Categories categories={data.categories} />
-        <TopProducts products={data.topProducts} />
         <div className="lg:col-span-3">
           <RecentSales sales={data.recentSales} />
         </div>

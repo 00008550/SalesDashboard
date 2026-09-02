@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Dashboard } from '../components/Dashboard';
@@ -78,6 +78,29 @@ describe('Dashboard', () => {
     expect(await screen.findByText('Revenue')).toBeInTheDocument();
     expect(screen.getByText('Manager ranking')).toBeInTheDocument();
     expect(within(rankingSection()).getByText('GP Leader')).toBeInTheDocument();
+    const rankingList = within(rankingSection()).getByRole('list', { name: /manager ranking by gross profit \(scrollable\)/i });
+    expect(rankingList).toHaveAttribute('tabindex', '0');
+    expect(rankingList).toHaveClass('overflow-y-auto');
+  });
+
+  it('names the trend visualization and exposes its exact values in an accessible table', async () => {
+    respondWith(makeResponse());
+    renderDashboard();
+    await screen.findByText('Revenue');
+
+    const chart = screen.getByRole('img', {
+      name: /sales trend chart for revenue, gross profit, and paid sales/i,
+    });
+    expect(chart).toHaveAttribute('tabindex', '0');
+    const descriptionId = chart.getAttribute('aria-describedby');
+    expect(descriptionId).not.toBeNull();
+    expect(document.getElementById(descriptionId!)).toHaveTextContent(/1 day bucket/i);
+
+    const table = screen.getByRole('table', { name: /sales trend exact values/i });
+    expect(within(table).getByRole('columnheader', { name: 'Revenue amount' })).toBeInTheDocument();
+    expect(within(table).getByRole('columnheader', { name: 'Gross profit' })).toBeInTheDocument();
+    expect(within(table).getByText('$1,000.00')).toBeInTheDocument();
+    expect(within(table).getByText('20')).toBeInTheDocument();
   });
 
   it('switches the server-ranked collection when the ranking mode is toggled', async () => {
@@ -106,6 +129,73 @@ describe('Dashboard', () => {
     });
   });
 
+  it('marks an inverted custom range invalid and makes no request for it', async () => {
+    respondWith(makeResponse());
+    renderDashboard();
+    await screen.findByText('Revenue');
+    const callsBeforeEditing = fetchMock.mock.calls.length;
+    const from = screen.getByLabelText('From date');
+    const to = screen.getByLabelText('To date');
+
+    fireEvent.change(from, { target: { value: '2026-09-02' } });
+    fireEvent.change(to, { target: { value: '2026-09-01' } });
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('“From” must be on or before “To”.');
+    expect(from).toHaveAttribute('aria-invalid', 'true');
+    expect(to).toHaveAttribute('aria-invalid', 'true');
+    expect(from).toHaveAttribute('aria-describedby', alert.id);
+    expect(to).toHaveAttribute('aria-describedby', alert.id);
+    expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
+    expect(fetchMock).toHaveBeenCalledTimes(callsBeforeEditing);
+  });
+
+  it('rejects a 732-day custom range client-side but accepts the 731-day boundary', async () => {
+    respondWith(makeResponse());
+    renderDashboard();
+    await screen.findByText('Revenue');
+    const callsBeforeEditing = fetchMock.mock.calls.length;
+    const from = screen.getByLabelText('From date');
+    const to = screen.getByLabelText('To date');
+    const apply = screen.getByRole('button', { name: 'Apply' });
+
+    fireEvent.change(from, { target: { value: '2024-01-01' } });
+    fireEvent.change(to, { target: { value: '2026-01-01' } });
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('Date ranges can include at most 731 days.');
+    expect(from).toHaveAttribute('aria-invalid', 'true');
+    expect(to).toHaveAttribute('aria-describedby', alert.id);
+    expect(apply).toBeDisabled();
+    expect(fetchMock).toHaveBeenCalledTimes(callsBeforeEditing);
+
+    // 2024 is a leap year: 2024-01-01 through 2025-12-31 is exactly 731 inclusive days.
+    fireEvent.change(to, { target: { value: '2025-12-31' } });
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(from).not.toHaveAttribute('aria-invalid');
+    expect(to).not.toHaveAttribute('aria-describedby');
+    expect(apply).toBeEnabled();
+
+    await userEvent.click(apply);
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.some(([url]) => String(url).includes('from=2024-01-01&to=2025-12-31'))).toBe(true);
+    });
+  });
+
+  it('does not automatically retry a non-transient 4xx response', async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ detail: 'The range is invalid.' }),
+    } as Response);
+
+    renderDashboard();
+
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByText('The range is invalid.')).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('recovers when Retry is clicked: it issues a fresh request and renders the data', async () => {
     const failure = { ok: false, status: 500, json: async () => ({ detail: 'Boom' }) } as Response;
     // Initial load makes two attempts (retry: 1); both fail. Everything after recovers.
@@ -120,6 +210,7 @@ describe('Dashboard', () => {
     expect(within(alert).getByText(/couldn.t load the dashboard/i)).toBeInTheDocument();
     expect(within(alert).getByText('Boom')).toBeInTheDocument();
     const callsBeforeRetry = fetchMock.mock.calls.length;
+    expect(callsBeforeRetry).toBe(2);
 
     await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
 

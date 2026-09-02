@@ -61,15 +61,17 @@ export function ManagerRankings({ rankings }: { rankings: RankingsDto }) {
   );
 
   return (
-    <Card className="flex h-full flex-col">
+    <Card className="flex h-full min-h-0 flex-col overflow-hidden">
       <CardHeader title="Manager ranking" action={toggle} />
       {rows.length === 0 ? (
-        <EmptyState message="No ranked managers in this period" />
+        <div className="min-h-0 flex-1">
+          <EmptyState message="No ranked managers in this period" />
+        </div>
       ) : (
         <ol
           tabIndex={0}
           aria-label={`Manager ranking by ${mode === 'gp' ? 'gross profit' : 'average check'} (scrollable)`}
-          className="min-h-0 flex-1 divide-y divide-slate-100 overflow-y-auto rounded-b-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600"
+          className="min-h-0 flex-1 scroll-mt-40 divide-y divide-slate-100 overflow-y-auto rounded-b-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600 xl:scroll-mt-20"
         >
           {rows.map((r) => (
             <Row key={r.managerId} row={r} mode={mode} />
