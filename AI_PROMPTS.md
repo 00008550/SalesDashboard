@@ -1637,3 +1637,111 @@ _(Second independent re-review of PR #1 at HEAD 3184b60. Verbatim.)_
 > - git diff --check and clean status.
 >
 > Append this instruction verbatim to AI_PROMPTS.md. Keep all commits additive, do not merge the PR, and report exact results and remaining caveats.
+
+## 2026-09-02 18:19:02 +05:00 — OpenAI Codex
+
+You are taking over the final corrective pass for the existing SalesDashboard take-home PR.
+
+Repository and PR context:
+- Saved project: E:\Work\GitProjects\SalesDashboard
+- Pull request: https://github.com/00008550/SalesDashboard/pull/1
+- Target branch: feat/dashboard-app
+- Expected starting HEAD: 33a6b5b4a37ce0fe9d510e27047b25f5fd4ece78
+- Assignment specification: E:\Work\DIJ-Market.md
+- The working tree was clean at handoff.
+- The user authorizes code, tests, documentation, focused additive commits, and pushing those commits to the existing PR branch.
+- Do not merge the PR. Do not amend, squash, rebase, reset, force-push, or rewrite published history.
+- Do not start another architecture cycle and do not add unrelated functionality, CI, authentication, mobile work, code splitting, or new projects.
+
+Prompt-log rule:
+Append this entire instruction verbatim to AI_PROMPTS.md under an honest current timestamp and an “OpenAI Codex” heading. Append only this new instruction. Do not reconstruct or back-fill any earlier missing prompts. Keep secrets and internal tool traces out of the log.
+
+First verify that HEAD and the online PR still match the expected state. Then address only the findings below.
+
+1. Make the legacy seed repair one-time and safe
+The current same-version repair in DeterministicSeeder classifies every sale with occurred_at > ops.seed_state.applied_at as a legacy seed defect on every startup. This silently corrupts legitimate sales created or imported after the initial seed. It was reproduced by inserting a valid Paid sale at applied_at + 2 days and restarting HEAD; the seeder moved it back into the original seed day.
+
+Replace the perpetual broad startup repair with a safe one-time forward repair, preferably an additive EF migration or an explicitly versioned/positively identified repair state. Preserve every sale/item id and all row counts. A normal post-seed sale must never be rewritten on later startup. Preserve the real origin/master upgrade behavior: the 12 legacy future-dated seed rows must become zero without destructive reseeding.
+
+Add regressions that prove:
+- a real/representative legacy v1 database is repaired with ids and counts preserved;
+- a legitimate post-seed sale remains byte-for-byte unchanged after one or more application/seeder restarts;
+- the repair is idempotent.
+
+2. Correct the 1440x900 ranking/grid layout
+The latest removal of max-height caused the 18-row ranking to determine both CSS-grid row heights. At 1440x900 the manager card measured 1228px, the list clientHeight equaled scrollHeight at 1169px, the page grew to 2280px, and large blank areas appeared in Trend, Categories, and Top Products. The element is labelled “scrollable” but no longer scrolls with PageDown.
+
+Constrain the spanning grid item/card correctly (inspect intrinsic min-size behavior; an outer min-h-0/overflow constraint may be part of the solution) so:
+- the left cards keep natural, compact heights;
+- the manager list uses available card height and becomes internally scrollable when needed;
+- keyboard focus plus PageDown/arrow scrolling works;
+- there is no large blank-card area;
+- the result is visually polished at exactly 1440x900.
+
+Do not merely move the blank space to another card. Measure and report card/list/page dimensions before and after.
+
+3. Finish custom-range UX and state accessibility
+The backend maximum is 731 inclusive days, but PeriodControls validates only from <= to. An over-limit range currently sends two identical 400 requests because every error is retried, waits about 1.5 seconds, then presents a Retry action that can only resend invalid input.
+
+Implement and test:
+- client-side inclusive-day validation matching the 731-day server contract;
+- aria-invalid/aria-describedby with a clear inline message for both inverted and over-limit ranges;
+- no request for a client-known invalid range;
+- preserve HTTP status in the API error type and do not retry non-transient 4xx responses;
+- Retry still works for a transient/server failure.
+
+Fix the remaining state-specific contrast failures:
+- invalid-range text currently uses rose-600 at approximately 4.48:1;
+- the applied custom-range chip uses slate-500 on slate-100 at approximately 4.34:1.
+Use colors that clearly pass 4.5:1 and run axe on default, valid-custom, invalid-custom, empty, updating, and error states—not only the default dashboard.
+
+4. Make the trend presentation contract explicit
+For long weekly custom periods, date_trunc('week', start) can produce a first bucketStart before period.current.start. Totals reconcile, but the response label is ambiguous. Either clip the first partial bucket label to the resolved current start without breaking aggregation, or explicitly document and test calendar-aligned partial weekly buckets. Prefer the least surprising API contract.
+
+Also give the data-bearing trend visualization an accessible name and a keyboard/screen-reader equivalent for its values (for example, a concise accessible description plus visually hidden tabular data). Do not rely only on pointer-hover tooltips.
+
+5. Remediate and report container packages truthfully
+The current PR/AI_NOTES statement that no fixed versions exist is false. Fresh scans report:
+- API: 2 critical / 7 high in openssl 3.5.7-r0, with fixed version 3.5.8-r0;
+- Web: 2 critical / 9 high, with fixed openssl 3.5.8-r0 and expat 2.8.4-r0.
+Those versions are currently available in the Alpine 3.24 repositories.
+
+Upgrade runtime packages during the Docker builds where appropriate, rebuild, and rerun Docker Scout. Correct the Dockerfile comment: ordinary docker compose up --build does not guarantee a base-image re-pull unless pull behavior is explicitly requested. Do not claim zero or “unfixable” unless the new scan proves it.
+
+6. Bring the public documentation into honest assignment compliance
+Do not back-fill old AI_PROMPTS entries; only append this instruction as stated above.
+
+Update AI_NOTES and README so they honestly disclose:
+- Claude Code as the primary implementation agent;
+- OpenAI Codex as the independent read-only reviewer/verifier that found the corrective issues;
+- what was delegated, what was manually challenged, and the real remaining caveats.
+
+AI_NOTES is currently about 167 lines despite the assignment asking for a short 10–30-line reflection. Condense it substantially into a genuine reflection rather than a chronological verification ledger, while preserving the important models/tools, delegation, rejected suggestions, genuine AI errors, and verification method.
+
+README must document:
+- the 731-inclusive-day custom-range maximum;
+- the exact current run/test instructions;
+- what was actually unfinished within the timebox, or an explicit honest statement that only the listed production follow-ups remain.
+Update the online PR description to match final reality and final test counts.
+
+7. Final verification
+Before declaring completion, independently run and report:
+- dotnet build -c Release with zero errors/warnings;
+- all backend tests, including the new data-preservation regressions;
+- npm clean install/audit, all frontend tests, and production build;
+- fresh docker compose up --build from a clean project/volume;
+- real origin/master-to-HEAD upgrade with counts and ID checksums preserved and legacy future rows repaired;
+- restart after inserting a legitimate post-seed sale, proving its timestamp is unchanged;
+- readiness for current schema, stale migration, database loss, and recovery;
+- independent SQL reconciliation of Revenue, Cost, Gross Profit, Paid Sales, trend, and categories;
+- live browser verification at 1440x900 for every preset, valid custom, over-limit custom, ranking switch, loading/updating, Error/Retry, empty states, keyboard scrolling, console/network, and axe across all relevant states;
+- Docker Scout after the package upgrade;
+- dotnet format --verify-no-changes, git diff --check, and a clean final worktree.
+
+Use focused additive commits, push them to feat/dashboard-app, update PR #1, do not merge it, and stop with:
+1. commit hashes by finding;
+2. files changed;
+3. exact verification evidence;
+4. any remaining caveat, stated honestly.
+
+Do not declare the PR ready merely because the existing tests pass.

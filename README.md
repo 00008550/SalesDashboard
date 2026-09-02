@@ -20,14 +20,39 @@ deterministic seed automatically; the dashboard loads populated. No manual datab
 migration, or seed step is needed. (The database and API ports are internal; nginx serves the SPA
 and proxies `/api` to the API, so the browser only ever talks to one origin.)
 
-To run the tests:
+`docker compose up --build` is the evaluator-friendly one-command start, but Docker may reuse a
+locally cached base-image manifest and build layers. For a deliberately clean database and freshly
+pulled bases, use the following instead; **the first command deletes this project's local database
+volume**:
 
 ```bash
-# Backend (needs a Docker daemon — tests use a real PostgreSQL via Testcontainers)
-cd backend && dotnet test SalesDashboard.slnx
+docker compose down --volumes --remove-orphans
+docker compose build --pull --no-cache
+docker compose up
+```
+
+The API and web runtime stages also request patched Alpine OpenSSL packages (and libexpat for web)
+during their builds. After building, the exact high/critical image checks are:
+
+```bash
+docker scout cves --only-severity critical,high salesdashboard-api:latest
+docker scout cves --only-severity critical,high salesdashboard-web:latest
+```
+
+To reproduce the local build, test, audit, and formatting checks from the repository root (the
+backend tests need a running Docker daemon because they use PostgreSQL through Testcontainers):
+
+```bash
+# Backend
+dotnet build backend/SalesDashboard.slnx -c Release
+dotnet test backend/SalesDashboard.slnx -c Release --no-build
+dotnet format backend/SalesDashboard.slnx --verify-no-changes
 
 # Frontend
-cd frontend && npm install && npm test
+npm --prefix frontend ci
+npm --prefix frontend audit
+npm --prefix frontend test
+npm --prefix frontend run build
 ```
 
 ---
@@ -71,7 +96,8 @@ desc → Revenue desc → name asc → id asc.
 `[start, end)` UTC instants; `now` is captured once per request; calendar boundaries are resolved in
 the reporting timezone (**fixed UTC+03:00 / MSK** — MSK has no DST, so a fixed offset is exact) and
 converted to UTC. Custom ranges take inclusive date-only `from`/`to` and resolve to
-`[from 00:00, (to+1) 00:00)`.
+`[from 00:00, (to+1) 00:00)`. A custom range may contain at most **731 inclusive calendar days**
+(`to - from + 1 <= 731`); the UI validates this before requesting and the API enforces the same cap.
 
 | Preset | Current | Previous |
 |---|---|---|
@@ -122,7 +148,7 @@ Redis, Clean Architecture / CQRS / MediatR / generic repositories, and per-modul
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /api/dashboard?preset=today\|last7\|last30\|thisMonth\|prevMonth` **or** `?from=YYYY-MM-DD&to=YYYY-MM-DD` | The full dashboard snapshot: resolved period, summary KPIs with previous-period deltas, two server-ranked manager collections, zero-filled trend, categories, top products, recent sales. Invalid dates / `from > to` / unknown preset → **400 ProblemDetails**. |
+| `GET /api/dashboard?preset=today\|last7\|last30\|thisMonth\|prevMonth` **or** `?from=YYYY-MM-DD&to=YYYY-MM-DD` | The full dashboard snapshot: resolved period, summary KPIs with previous-period deltas, two server-ranked manager collections, zero-filled trend, categories, top products, recent sales. Invalid dates, `from > to`, ranges over 731 inclusive days, mixed preset/date parameters, and unknown presets → **400 ProblemDetails**. |
 | `GET /api/health/ready` | Readiness — 200 only after migrations **and** seed complete (drives the Docker health check). |
 | `GET /api/health/live` | Liveness. |
 
@@ -162,26 +188,24 @@ ranking-mode switch, period-switch refetch, error + Retry, and the empty-period 
   moment, so a fresh clone always has recent data in every preset. Absolute dates shift with the
   build date; the distribution does not.
 
-## What I did not do (honest)
+## Timebox boundary and production follow-ups
 
-- No authentication (out of scope per the brief).
-- The trend chart reads bottom-heavy when a few very large deals dominate a period — this is faithful
-  to the seed, not a bug, but a log scale or a "median day" marker would read better.
-- The bundle isn't code-split (Recharts dominates); fine for a desktop dashboard, easy to split.
-- No pagination on Recent Sales (it returns a small fixed page by design).
-
-## What I'd improve in production
-
-Real authN/Z and per-tenant scoping; pagination + server-side sorting on the sales feed; caching or a
-materialized read model / background aggregation for heavier datasets; observability (traces/metrics
-on the query paths); a refund ledger with event dates (removing the current refund simplification);
-and CI running the backend Testcontainers suite and the frontend build/tests on every push.
+No mandatory feature was knowingly left half-implemented. The work intentionally left outside the
+take-home timebox is production hardening: real authN/Z and tenant scoping (authentication was
+explicitly out of scope); pagination and server-side sorting for a larger sales feed; caching or a
+materialized/background read model for heavier datasets; traces and metrics on query paths; a refund
+ledger with event dates; CI for the Testcontainers/frontend suites; and bundle splitting (Recharts is
+the largest chunk). The current fixed-size Recent Sales page and original-period refund
+simplification are deliberate documented limits, not hidden unfinished paths.
 
 ## AI-assisted workflow
 
-Built with **Claude Code (Opus 4.8)** in a survey → architecture → implementation → **database
-verification** (psql ground-truth vs. the API JSON) → **browser verification** → independent review →
-fixes loop. The `.claude/` folder holds the agent roles (survey, implementation, review, ui-review)
-and the authoritative skills (`sales-domain`, `analytics-verification`, `docker-verification`,
-`frontend-quality`). See [`AI_PROMPTS.md`](AI_PROMPTS.md) for the verbatim prompt log and
-[`AI_NOTES.md`](AI_NOTES.md) for the reflection, including genuine bugs the process caught.
+**Claude Code (Opus 4.8)** was the primary implementation agent. **OpenAI Codex** then acted as an
+independent read-only PR reviewer/verifier and found corrective issues that were addressed in later
+explicitly authorized passes, including this final Codex implementation and re-verification pass.
+Mechanical EF/seed/SQL/React/test work was delegated; business/date
+semantics, architecture and scope were manually owned and challenged with psql reconciliation, real
+database upgrade/restart scenarios, measured 1440x900 browser states, keyboard and axe checks, and
+container scans. The `.claude/` folder records the implementation roles and skills. See
+[`AI_PROMPTS.md`](AI_PROMPTS.md) for the prompt log and [`AI_NOTES.md`](AI_NOTES.md) for the concise
+reflection, including rejected suggestions and genuine AI errors.
