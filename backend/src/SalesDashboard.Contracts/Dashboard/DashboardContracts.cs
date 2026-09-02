@@ -58,7 +58,12 @@ public sealed record RankingsDto(
     IReadOnlyList<ManagerRankRow> GrossProfit,
     IReadOnlyList<ManagerRankRow> AverageCheck);
 
-/// <summary>A continuous, zero-filled trend bucket (Paid sales only).</summary>
+/// <summary>
+/// A continuous, zero-filled trend bucket (Paid sales only). Buckets aggregate by reporting-calendar
+/// hour/day/week as selected by <see cref="PeriodDto.Granularity"/>. When a weekly period starts
+/// mid-week, the first partial bucket is labelled with the resolved current-period start (never an
+/// instant before it); later buckets retain their calendar-aligned starts.
+/// </summary>
 public sealed record TrendPoint(DateTimeOffset BucketStart, decimal Revenue, decimal GrossProfit, int PaidSales);
 
 public sealed record CategorySlice(Guid CategoryId, string Name, decimal Revenue, decimal GrossProfit, double Share);

@@ -126,7 +126,11 @@ public sealed class DashboardQueries(NpgsqlDataSource dataSource)
                         @step::interval) AS gs
                 WHERE gs < (@end AT TIME ZONE 'Etc/GMT-3')
             )
-            SELECT (b.bucket_local AT TIME ZONE 'Etc/GMT-3') AS bucket_start,
+            -- Aggregation remains calendar-aligned, but a partial first bucket is labelled with the
+            -- requested window start instead of an instant outside period.current. GREATEST changes
+            -- only that presentation label; the join still uses the true calendar bucket.
+            SELECT (GREATEST(b.bucket_local, (@start AT TIME ZONE 'Etc/GMT-3'))
+                        AT TIME ZONE 'Etc/GMT-3') AS bucket_start,
                    COALESCE(f.revenue, 0)::numeric AS revenue,
                    (COALESCE(f.revenue, 0) - COALESCE(f.cost, 0))::numeric AS gross_profit,
                    COALESCE(f.paid_sales, 0) AS paid_sales
