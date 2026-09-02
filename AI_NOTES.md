@@ -43,8 +43,21 @@ implementation:
 ## Where AI accelerated the work
 - _(to be filled in)_
 
-## Where AI got it wrong / what I changed or rejected
-- _(to be filled in — recorded only when a genuine mistake occurs, not invented)_
+## Where AI got it wrong / what I changed or rejected (genuine, caught during implementation)
+- **Stale initial migration**: the first-pass migration had only 1 of 5 FKs (as CASCADE) and no CHECK
+  constraints. Corrected the EF configs (cross-module FKs in WriteDbContext, all RESTRICT) + checks
+  and regenerated the migration.
+- **Dockerfile `adduser` collision**: the .NET 10 Alpine image already ships a non-root `app` user, so
+  `adduser -D -u 64198 app` failed the build. Fixed by reusing the built-in user.
+- **Startup integration test config**: injecting the connection string via the factory's
+  `ConfigureAppConfiguration` applied too late (it's read during `CreateBuilder`); switched to the
+  environment variable the app already reads.
 
-## How generated code was verified
-- _(to be filled in: build, tests, `docker compose up --build` from a clean state, manual dashboard check)_
+## How generated code was verified (as of the seed/startup milestone)
+- `dotnet build` green (0 warnings); **4 focused backend tests pass** on a real Testcontainers
+  PostgreSQL (seed scale + edge cases, idempotency, deterministic shape, WebApplicationFactory
+  startup → ready + populated).
+- **`docker compose up --build` from a clean state**: db → api health-ordered, `/api/health/ready`
+  200, `/api/meta/counts` **reconciled against psql ground truth** (sales 3200, sale_items 5419,
+  seed v1); api restart idempotent ("Seed v1 already applied … skipping"). Not taken on trust — the
+  API numbers were cross-checked against SQL, and the restart proved idempotency.
