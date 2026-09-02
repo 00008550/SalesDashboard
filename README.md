@@ -149,7 +149,7 @@ Redis, Clean Architecture / CQRS / MediatR / generic repositories, and per-modul
 | Endpoint | Purpose |
 |---|---|
 | `GET /api/dashboard?preset=today\|last7\|last30\|thisMonth\|prevMonth` **or** `?from=YYYY-MM-DD&to=YYYY-MM-DD` | The full dashboard snapshot: resolved period, summary KPIs with previous-period deltas, two server-ranked manager collections, zero-filled trend, categories, top products, recent sales. Invalid dates, `from > to`, ranges over 731 inclusive days, mixed preset/date parameters, and unknown presets → **400 ProblemDetails**. |
-| `GET /api/health/ready` | Readiness — 200 only after migrations **and** seed complete (drives the Docker health check). |
+| `GET /api/health/ready` | Readiness — 200 only after migrations and seed/repair complete **and** the pooled dashboard read path is usable (drives the Docker health check). |
 | `GET /api/health/live` | Liveness. |
 
 ## Database

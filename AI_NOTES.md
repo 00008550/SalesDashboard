@@ -12,7 +12,7 @@ This is the short reflection requested by the assignment; detailed prompts remai
 ## Where AI helped
 
 - AI accelerated repetitive EF configuration, seed generation, Dapper queries, component construction, and focused regression-test creation.
-- Separate implementation and review roles were valuable: green tests alone had hidden data-preservation, layout, retry, accessibility, and image-package defects.
+- Separate implementation and review roles were valuable: green tests alone had hidden data-preservation, layout, retry, accessibility, image-package, and post-outage connection-pool defects.
 
 ## Where I changed or rejected AI output
 

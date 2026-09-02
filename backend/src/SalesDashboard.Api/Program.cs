@@ -25,17 +25,21 @@ app.UseStatusCodePages();
 app.MapGet("/api/health/live", () => Results.Ok(new { status = "live" }));
 
 // Readiness: a live check, re-evaluated on every probe. It proves the database is reachable, at the
-// latest migration (no migration still pending), and seeded — see ReadinessProbe. It therefore flips
-// back to 503 if PostgreSQL later becomes unavailable or the schema is rolled back, rather than
-// latching at 200.
-app.MapGet("/api/health/ready", async (WriteDbContext db, CancellationToken ct) =>
+// latest migration (no migration still pending), seeded, and usable through the pooled dashboard
+// read path — see ReadinessProbe. It therefore flips back to 503 if PostgreSQL later becomes
+// unavailable or the schema is rolled back, rather than latching at 200.
+app.MapGet("/api/health/ready", async (WriteDbContext db, Npgsql.NpgsqlDataSource readDataSource, CancellationToken ct) =>
 {
     try
     {
-        var result = await ReadinessProbe.EvaluateAsync(db, ct);
+        var result = await ReadinessProbe.EvaluateAsync(db, readDataSource, ct);
         return result.Ready
             ? Results.Ok(new { status = result.Status })
             : Results.Json(new { status = result.Status }, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+    catch (OperationCanceledException) when (ct.IsCancellationRequested)
+    {
+        throw;
     }
     catch
     {

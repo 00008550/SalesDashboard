@@ -35,6 +35,11 @@ public sealed class ReadinessTests
             var ready = await client.GetAsync("/api/health/ready");
             Assert.Equal(HttpStatusCode.OK, ready.StatusCode);
 
+            // Prime the shared NpgsqlDataSource pool used by Dapper. PostgreSQL shutdown leaves this
+            // idle connector stale until a later command observes 57P01.
+            var initialDashboard = await client.GetAsync("/api/dashboard?preset=last30");
+            Assert.Equal(HttpStatusCode.OK, initialDashboard.StatusCode);
+
             await pg.StopAsync(); // dependency loss
 
             var afterLoss = await client.GetAsync("/api/health/ready");
