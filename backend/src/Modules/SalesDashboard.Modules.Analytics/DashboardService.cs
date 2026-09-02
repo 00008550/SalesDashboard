@@ -58,8 +58,13 @@ public sealed class DashboardService(DashboardQueries queries, TimeProvider cloc
 
     private static ResolvedPeriod ResolvePeriod(string? preset, DateOnly? from, DateOnly? to, DateTimeOffset now)
     {
-        if (!string.IsNullOrWhiteSpace(preset))
-            return PeriodResolver.ResolvePreset(preset, now);
+        var hasPreset = !string.IsNullOrWhiteSpace(preset);
+        var hasCustom = from is not null || to is not null;
+
+        if (hasPreset && hasCustom)
+            throw new ArgumentException("Provide either 'preset' or 'from'/'to', not both.");
+        if (hasPreset)
+            return PeriodResolver.ResolvePreset(preset!, now);
         if (from is { } f && to is { } t)
             return PeriodResolver.ResolveCustom(f, t);
         throw new ArgumentException("Provide either a 'preset' or both 'from' and 'to'.");
@@ -75,7 +80,8 @@ public sealed class DashboardService(DashboardQueries queries, TimeProvider cloc
 
         double? curMargin = curRev > 0 ? (double)(curGp / curRev) : null;
         double? prevMargin = prevRev > 0 ? (double)(prevGp / prevRev) : null;
-        double? marginChangePoints = curMargin is { } cm && prevMargin is { } pm ? cm - pm : null;
+        // Delta in actual percentage points (already ×100), null when either side is null.
+        double? marginDeltaPp = curMargin is { } cm && prevMargin is { } pm ? (cm - pm) * 100 : null;
 
         decimal? curAvg = curPaid > 0 ? curRev / curPaid : null;
         decimal? prevAvg = prevPaid > 0 ? prevRev / prevPaid : null;
@@ -87,8 +93,9 @@ public sealed class DashboardService(DashboardQueries queries, TimeProvider cloc
 
         return new SummaryDto(
             new MoneyKpi(curRev, prevRev, Percent(curRev, prevRev)),
+            new MoneyKpi(curCost, prevCost, Percent(curCost, prevCost)),
             new MoneyKpi(curGp, prevGp, Percent(curGp, prevGp)),
-            new MarginKpi(curMargin, prevMargin, marginChangePoints),
+            new MarginKpi(curMargin, prevMargin, marginDeltaPp),
             new CountKpi(curPaid, prevPaid, Percent(curPaid, prevPaid)),
             new AverageCheckKpi(curAvg, prevAvg, Percent(curAvg, prevAvg)),
             best);

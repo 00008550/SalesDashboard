@@ -88,7 +88,11 @@ public sealed class DashboardServiceTests(PostgresFixture fx)
         Assert.Equal(550m, r.Summary.Revenue.Current);        // 250 + 200 + 100 (Cancelled/Refunded excluded)
         Assert.Equal(270m, r.Summary.GrossProfit.Current);    // 550 - 280
         Assert.Equal(550m / 3, r.Summary.AverageCheck.Current);
+        Assert.Equal(280m, r.Summary.Cost.Current);       // 140 + 100 + 40
+        Assert.Equal(50m, r.Summary.Cost.Previous);       // May sale cost
         Assert.Equal(270.0 / 550.0, r.Summary.Margin.Current!.Value, 6);
+        // Margin delta is in percentage points already (×100): (0.4909… − 0.5) × 100.
+        Assert.Equal((270.0 / 550.0 - 0.5) * 100, r.Summary.Margin.DeltaPp!.Value, 4);
 
         // Previous period (May): revenue 100 -> +450% change.
         Assert.Equal(100m, r.Summary.Revenue.Previous);

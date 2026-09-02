@@ -1,30 +1,26 @@
 using System.Net;
-using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
+using SalesDashboard.Infrastructure.Persistence;
 using SalesDashboard.Tests.Fixtures;
 
 namespace SalesDashboard.Tests.Startup;
 
 /// <summary>
 /// Drives the real API startup pipeline (migration -> seed -> readiness) against a fresh empty
-/// PostgreSQL database, then asserts the app reports ready and the database is populated. This proves
-/// the wiring the Docker vertical slice depends on, without Docker.
+/// PostgreSQL database, then asserts the app reports ready and the database is populated (inspected
+/// directly, not via a production endpoint).
 /// </summary>
 [Collection("postgres")]
 public sealed class StartupTests(PostgresFixture fx)
 {
-    private sealed record Counts(int categories, int products, int managers, int customers, int sales, int saleItems);
-
     [Fact]
     public async Task App_migrates_seeds_and_reports_ready_with_populated_data()
     {
         var connectionString = await fx.NewEmptyDatabaseConnectionStringAsync();
 
-        // The connection string is read during WebApplication.CreateBuilder, before any per-factory
-        // ConfigureAppConfiguration would apply, so supply it via the environment variable the app
-        // already reads. Scoped to this test and cleared in the finally.
         Environment.SetEnvironmentVariable("ConnectionStrings__Default", connectionString);
         try
         {
@@ -36,10 +32,11 @@ public sealed class StartupTests(PostgresFixture fx)
             var ready = await client.GetAsync("/api/health/ready");
             Assert.Equal(HttpStatusCode.OK, ready.StatusCode);
 
-            var counts = await client.GetFromJsonAsync<Counts>("/api/meta/counts");
-            Assert.NotNull(counts);
-            Assert.InRange(counts!.sales, 2000, 5000);
-            Assert.True(counts.saleItems > counts.sales, "multi-item sales mean more items than sales");
+            // Inspect the database directly to confirm the seed populated it.
+            await using var db = new WriteDbContext(PostgresFixture.OptionsFor(connectionString));
+            var sales = await db.Sales.CountAsync();
+            Assert.InRange(sales, 2000, 5000);
+            Assert.True(await db.SaleItems.CountAsync() > sales, "multi-item sales mean more items than sales");
         }
         finally
         {

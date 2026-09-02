@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using SalesDashboard.Api;
 using SalesDashboard.Infrastructure;
 using SalesDashboard.Infrastructure.Persistence;
+using SalesDashboard.Infrastructure.Seeding;
 using SalesDashboard.Modules.Analytics;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,7 +13,6 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
 builder.Services.AddInfrastructure(connectionString);
 builder.Services.AddScoped<DashboardQueries>();
 builder.Services.AddScoped<DashboardService>();
-builder.Services.AddSingleton<StartupState>();
 builder.Services.AddProblemDetails();
 
 var app = builder.Build();
@@ -21,17 +20,33 @@ var app = builder.Build();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
-// Liveness: the process is up. Never fails — used for restart decisions, not readiness.
+// Liveness: the process is up. Never touches dependencies — used for restart decisions only.
 app.MapGet("/api/health/live", () => Results.Ok(new { status = "live" }));
 
-// Readiness: true only once migrations + seed have completed. Drives the Docker health check and
-// any depends_on: service_healthy gate.
-app.MapGet("/api/health/ready", (StartupState state) => state.Ready
-    ? Results.Ok(new { status = "ready" })
-    : Results.Json(new { status = "starting" }, statusCode: StatusCodes.Status503ServiceUnavailable));
+// Readiness: a live check, re-evaluated on every probe — the database must be reachable AND the
+// expected seed version must be present (which also proves migrations ran). It therefore flips back
+// to 503 if PostgreSQL later becomes unavailable, rather than latching at 200.
+app.MapGet("/api/health/ready", async (WriteDbContext db, CancellationToken ct) =>
+{
+    try
+    {
+        if (!await db.Database.CanConnectAsync(ct))
+            return Results.Json(new { status = "db_unreachable" }, statusCode: StatusCodes.Status503ServiceUnavailable);
+
+        var seeded = await db.SeedState.AnyAsync(m => m.Version == DeterministicSeeder.SeedVersion, ct);
+        return seeded
+            ? Results.Ok(new { status = "ready" })
+            : Results.Json(new { status = "not_seeded" }, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+    catch
+    {
+        return Results.Json(new { status = "unavailable" }, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+});
 
 // The single composed dashboard snapshot. Accepts either ?preset=... or ?from=&to= (inclusive
-// date-only). Invalid input -> 400 ProblemDetails. All aggregation happens server-side.
+// date-only) — mixing them, or an invalid/inverted range, is a 400 ProblemDetails. All aggregation
+// happens server-side.
 app.MapGet("/api/dashboard", async (
     string? preset, DateOnly? from, DateOnly? to, DashboardService dashboard, CancellationToken ct) =>
 {
@@ -46,22 +61,9 @@ app.MapGet("/api/dashboard", async (
     }
 });
 
-// Proof-of-data endpoint kept from the early Docker slice; also used by the startup test.
-// Confirms the seed actually populated the database.
-app.MapGet("/api/meta/counts", async (WriteDbContext db, CancellationToken ct) => Results.Ok(new
-{
-    categories = await db.Categories.CountAsync(ct),
-    products = await db.Products.CountAsync(ct),
-    managers = await db.Managers.CountAsync(ct),
-    customers = await db.Customers.CountAsync(ct),
-    sales = await db.Sales.CountAsync(ct),
-    saleItems = await db.SaleItems.CountAsync(ct),
-}));
-
-// Startup order: migrate → seed → mark ready. Runs before the app serves, so the port opens (and
-// readiness returns 200) only once the database is fully prepared.
+// Startup order: migrate → seed, before the app serves. The port opens only once the database is
+// migrated and seeded, so readiness answers truthfully from the first request.
 await app.Services.MigrateAndSeedAsync();
-app.Services.GetRequiredService<StartupState>().Ready = true;
 
 app.Run();
 

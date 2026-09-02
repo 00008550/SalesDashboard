@@ -19,14 +19,16 @@ public sealed record MoneyKpi(decimal Current, decimal Previous, double? ChangeP
 public sealed record CountKpi(int Current, int Previous, double? ChangePercent);
 public sealed record AverageCheckKpi(decimal? Current, decimal? Previous, double? ChangePercent);
 
-/// <summary>Margin as a fraction (0.42 = 42%). ChangePoints is the difference in fractions
-/// (0.021 = +2.1 percentage points); null when either side is null.</summary>
-public sealed record MarginKpi(double? Current, double? Previous, double? ChangePoints);
+/// <summary>Margin as a fraction (0.42 = 42%). <see cref="DeltaPp"/> is the change already expressed
+/// in percentage points ((current − previous) × 100, e.g. −4.7 = −4.7 pp); null when either side is
+/// null. The frontend renders it directly and must not multiply again.</summary>
+public sealed record MarginKpi(double? Current, double? Previous, double? DeltaPp);
 
 public sealed record BestManagerDto(Guid ManagerId, string Name, string Initials, string AvatarColor, decimal GrossProfit);
 
 public sealed record SummaryDto(
     MoneyKpi Revenue,
+    MoneyKpi Cost,
     MoneyKpi GrossProfit,
     MarginKpi Margin,
     CountKpi PaidSales,
