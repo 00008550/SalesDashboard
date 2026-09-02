@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using SalesDashboard.Infrastructure;
 using SalesDashboard.Infrastructure.Persistence;
 using SalesDashboard.Infrastructure.Seeding;
+using SalesDashboard.Infrastructure.Startup;
 using SalesDashboard.Modules.Analytics;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,20 +24,18 @@ app.UseStatusCodePages();
 // Liveness: the process is up. Never touches dependencies — used for restart decisions only.
 app.MapGet("/api/health/live", () => Results.Ok(new { status = "live" }));
 
-// Readiness: a live check, re-evaluated on every probe — the database must be reachable AND the
-// expected seed version must be present (which also proves migrations ran). It therefore flips back
-// to 503 if PostgreSQL later becomes unavailable, rather than latching at 200.
+// Readiness: a live check, re-evaluated on every probe. It proves the database is reachable, at the
+// latest migration (no migration still pending), and seeded — see ReadinessProbe. It therefore flips
+// back to 503 if PostgreSQL later becomes unavailable or the schema is rolled back, rather than
+// latching at 200.
 app.MapGet("/api/health/ready", async (WriteDbContext db, CancellationToken ct) =>
 {
     try
     {
-        if (!await db.Database.CanConnectAsync(ct))
-            return Results.Json(new { status = "db_unreachable" }, statusCode: StatusCodes.Status503ServiceUnavailable);
-
-        var seeded = await db.SeedState.AnyAsync(m => m.Version == DeterministicSeeder.SeedVersion, ct);
-        return seeded
-            ? Results.Ok(new { status = "ready" })
-            : Results.Json(new { status = "not_seeded" }, statusCode: StatusCodes.Status503ServiceUnavailable);
+        var result = await ReadinessProbe.EvaluateAsync(db, ct);
+        return result.Ready
+            ? Results.Ok(new { status = result.Status })
+            : Results.Json(new { status = result.Status }, statusCode: StatusCodes.Status503ServiceUnavailable);
     }
     catch
     {
