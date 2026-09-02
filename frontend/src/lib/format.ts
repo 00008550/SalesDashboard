@@ -22,16 +22,18 @@ export function changeDisplay(changePercent: number | null | undefined): { text:
   return { text: `${sign}${pct.toFixed(1)}%`, dir: pct > 0.05 ? 'up' : pct < -0.05 ? 'down' : 'flat' };
 }
 
-/** Margin change in percentage points (fraction difference -> "+2.1 pp"). Null -> "—". */
-export function pointsDisplay(changePoints: number | null | undefined): { text: string; dir: Direction } {
-  if (changePoints == null) return { text: '—', dir: 'flat' };
-  const pp = changePoints * 100;
-  const sign = pp > 0 ? '+' : '';
-  return { text: `${sign}${pp.toFixed(1)} pp`, dir: pp > 0.05 ? 'up' : pp < -0.05 ? 'down' : 'flat' };
+/** Margin delta already in percentage points ("+2.1 pp"). Null -> "—". Does NOT multiply again. */
+export function pointsDisplay(deltaPp: number | null | undefined): { text: string; dir: Direction } {
+  if (deltaPp == null) return { text: '—', dir: 'flat' };
+  const sign = deltaPp > 0 ? '+' : '';
+  return { text: `${sign}${deltaPp.toFixed(1)} pp`, dir: deltaPp > 0.05 ? 'up' : deltaPp < -0.05 ? 'down' : 'flat' };
 }
 
-const dateFmt = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
-const dateTimeFmt = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+// All dates are displayed in the documented reporting timezone (UTC+03:00 / MSK). Etc/GMT-3 is the
+// IANA name for a fixed UTC+3 offset (sign inverted), matching the backend's fixed offset exactly.
+const REPORTING_TZ = 'Etc/GMT-3';
+const dateFmt = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: REPORTING_TZ });
+const dateTimeFmt = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: REPORTING_TZ });
 
 export const shortDate = (iso: string): string => dateFmt.format(new Date(iso));
 export const dateTime = (iso: string): string => dateTimeFmt.format(new Date(iso));

@@ -33,15 +33,19 @@ export function PeriodControls({ period, onChange }: { period: Period; onChange:
           aria-label="From date"
           value={from}
           onChange={(e) => setFrom(e.target.value)}
-          className="rounded-md border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+          aria-invalid={invalid || undefined}
+          aria-describedby={invalid ? 'date-range-error' : undefined}
+          className={`rounded-md border bg-white px-2 py-1.5 text-sm text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${invalid ? 'border-rose-400' : 'border-slate-200'}`}
         />
-        <span className="text-slate-400" aria-hidden>→</span>
+        <span className="text-slate-500" aria-hidden>→</span>
         <input
           type="date"
           aria-label="To date"
           value={to}
           onChange={(e) => setTo(e.target.value)}
-          className="rounded-md border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+          aria-invalid={invalid || undefined}
+          aria-describedby={invalid ? 'date-range-error' : undefined}
+          className={`rounded-md border bg-white px-2 py-1.5 text-sm text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${invalid ? 'border-rose-400' : 'border-slate-200'}`}
         />
         <button
           onClick={() => canApply && onChange({ kind: 'custom', from, to })}
@@ -52,7 +56,11 @@ export function PeriodControls({ period, onChange }: { period: Period; onChange:
         </button>
       </div>
 
-      {invalid && <span className="text-xs text-rose-600">“From” must be on or before “To”.</span>}
+      {invalid && (
+        <span id="date-range-error" role="alert" className="text-xs text-rose-600">
+          “From” must be on or before “To”.
+        </span>
+      )}
       {period.kind === 'custom' && !invalid && (
         <span className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-500 tabular">
           {period.from} → {period.to}

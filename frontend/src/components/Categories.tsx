@@ -23,7 +23,7 @@ export function Categories({ categories }: { categories: CategorySlice[] }) {
                     style={{ width: `${Math.max(2, c.share * 100)}%` }}
                   />
                 </div>
-                <span className="w-10 shrink-0 text-right text-xs text-slate-400 tabular">{percentFromFraction(c.share)}</span>
+                <span className="w-10 shrink-0 text-right text-xs text-slate-500 tabular">{percentFromFraction(c.share)}</span>
               </div>
             </li>
           ))}

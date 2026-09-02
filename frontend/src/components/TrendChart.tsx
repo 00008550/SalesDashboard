@@ -27,9 +27,9 @@ export function TrendChart({ data, granularity }: { data: TrendPoint[]; granular
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
-              <XAxis dataKey="bucketStart" tickFormatter={tick} tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={{ stroke: '#e2e8f0' }} minTickGap={24} />
-              <YAxis yAxisId="money" tickFormatter={(v) => moneyCompact(v as number)} tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={64} />
-              <YAxis yAxisId="count" orientation="right" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={36} allowDecimals={false} />
+              <XAxis dataKey="bucketStart" tickFormatter={tick} tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={{ stroke: '#e2e8f0' }} minTickGap={24} />
+              <YAxis yAxisId="money" tickFormatter={(v) => moneyCompact(v as number)} tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={false} width={64} />
+              <YAxis yAxisId="count" orientation="right" tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={false} width={36} allowDecimals={false} />
               <Tooltip
                 labelFormatter={(l) => (granularity === 'hour' ? dateTime(l as string) : shortDate(l as string))}
                 formatter={(value, name) =>

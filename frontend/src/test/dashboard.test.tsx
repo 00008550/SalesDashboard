@@ -24,8 +24,9 @@ function makeResponse(over: Partial<DashboardResponse> = {}): DashboardResponse 
     },
     summary: {
       revenue: { current: 1000, previous: 800, changePercent: 0.25 },
+      cost: { current: 600, previous: 450, changePercent: 0.33 },
       grossProfit: { current: 400, previous: 350, changePercent: 0.14 },
-      margin: { current: 0.4, previous: 0.43, changePoints: -0.03 },
+      margin: { current: 0.4, previous: 0.43, deltaPp: -3 },
       paidSales: { current: 20, previous: 16, changePercent: 0.25 },
       averageCheck: { current: 50, previous: 50, changePercent: 0 },
       bestManager: { managerId: 'GP Leader', name: 'GP Leader', initials: 'GP', avatarColor: '#111', grossProfit: 400 },

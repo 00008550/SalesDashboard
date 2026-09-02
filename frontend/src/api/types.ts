@@ -7,12 +7,14 @@ export interface PeriodDto { preset: string; current: PeriodWindow; previous: Pe
 export interface MoneyKpi { current: number; previous: number; changePercent: number | null }
 export interface CountKpi { current: number; previous: number; changePercent: number | null }
 export interface AverageCheckKpi { current: number | null; previous: number | null; changePercent: number | null }
-export interface MarginKpi { current: number | null; previous: number | null; changePoints: number | null }
+/** Margin as a fraction; deltaPp is already in percentage points (do not multiply again). */
+export interface MarginKpi { current: number | null; previous: number | null; deltaPp: number | null }
 
 export interface BestManagerDto { managerId: string; name: string; initials: string; avatarColor: string; grossProfit: number }
 
 export interface SummaryDto {
   revenue: MoneyKpi;
+  cost: MoneyKpi;
   grossProfit: MoneyKpi;
   margin: MarginKpi;
   paidSales: CountKpi;

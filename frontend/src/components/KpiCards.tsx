@@ -11,7 +11,7 @@ function Kpi({ label, value, delta, footer }: { label: string; value: string; de
         {delta}
       </div>
       <div className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 tabular">{value}</div>
-      {footer && <div className="mt-1 text-xs text-slate-400 tabular">{footer}</div>}
+      {footer && <div className="mt-1 text-xs text-slate-500 tabular">{footer}</div>}
     </Card>
   );
 }
@@ -36,7 +36,7 @@ export function KpiCards({ summary }: { summary: SummaryDto }) {
       <Kpi
         label="Margin"
         value={percentFromFraction(margin.current)}
-        delta={<Delta display={pointsDisplay(margin.changePoints)} title="Change in percentage points" />}
+        delta={<Delta display={pointsDisplay(margin.deltaPp)} title="Change in percentage points" />}
         footer={`prev ${percentFromFraction(margin.previous)}`}
       />
       <Kpi
@@ -64,11 +64,11 @@ export function KpiCards({ summary }: { summary: SummaryDto }) {
             </span>
             <div className="min-w-0">
               <div className="truncate text-sm font-semibold text-slate-900">{bestManager.name}</div>
-              <div className="text-xs text-slate-400 tabular">{moneyCompact(bestManager.grossProfit)} GP</div>
+              <div className="text-xs text-slate-500 tabular">{moneyCompact(bestManager.grossProfit)} GP</div>
             </div>
           </div>
         ) : (
-          <div className="mt-2 text-2xl font-semibold text-slate-400">—</div>
+          <div className="mt-2 text-2xl font-semibold text-slate-500">—</div>
         )}
       </Card>
     </div>

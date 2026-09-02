@@ -14,7 +14,7 @@ export function CardHeader({ title, subtitle, action }: { title: string; subtitl
     <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-3.5">
       <div>
         <h2 className="text-sm font-semibold text-slate-800">{title}</h2>
-        {subtitle && <p className="mt-0.5 text-xs text-slate-400">{subtitle}</p>}
+        {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
       </div>
       {action}
     </div>
@@ -61,7 +61,7 @@ export function EmptyState({ message }: { message: string }) {
   return (
     <div className="flex h-full min-h-[120px] flex-col items-center justify-center gap-1 px-6 py-10 text-center">
       <div className="text-sm font-medium text-slate-500">{message}</div>
-      <div className="text-xs text-slate-400">Try a different period.</div>
+      <div className="text-xs text-slate-500">Try a different period.</div>
     </div>
   );
 }
